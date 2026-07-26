@@ -1,25 +1,36 @@
-import os
+"""
+custom_logger.py
+
+Provides structured JSON logging for the application.
+Logs are written to both the console and a timestamped log file.
+"""
+
 import logging
+import os
 from datetime import datetime
 import structlog
 
 
 class CustomLogger:
-    """Structured JSON logger that writes to both the console and a timestamped log file."""
+    """Configure and provide a structured JSON logger."""
 
-    def __init__(self, log_dir="logs"):
-        # Create a logs folder in the project if it doesn't exist
+    def __init__(self, log_dir: str = "logs"):
+        """Create the log directory/file and configure logging."""
+
+        # Create logs/ directory if it does not exist.
         logs_dir = os.path.join(os.getcwd(), log_dir)
         os.makedirs(logs_dir, exist_ok=True)
 
-        # Create a unique log file using the current date and time
+        # Each application run gets a timestamped log file.
         log_file = f"{datetime.now().strftime('%m_%d_%Y_%H_%M_%S')}.log"
         self.log_file_path = os.path.join(logs_dir, log_file)
 
         self._configure()
 
-    def _configure(self):
-        """Set up console and file output, then structured JSON formatting. Runs once."""
+    def _configure(self) -> None:
+        """Configure console/file handlers and JSON log formatting."""
+
+        # structlog creates the JSON message; logging writes it to outputs.
         formatter = logging.Formatter("%(message)s")
 
         file_handler = logging.FileHandler(self.log_file_path)
@@ -28,25 +39,70 @@ class CustomLogger:
         console_handler = logging.StreamHandler()
         console_handler.setFormatter(formatter)
 
-        logging.basicConfig(level=logging.INFO, handlers=[console_handler, file_handler])
+        logging.basicConfig(
+            level=logging.INFO,
+            handlers=[console_handler, file_handler],
+        )
 
+        # Add common fields and render every log as JSON.
         structlog.configure(
             processors=[
-                structlog.processors.TimeStamper(fmt="iso", utc=True, key="timestamp"),  # Add timestamp
-                structlog.processors.add_log_level,             # Add log level
-                structlog.processors.EventRenamer(to="event"),  # Rename message key
-                structlog.processors.JSONRenderer(),             # Output logs as JSON
+                structlog.processors.TimeStamper(
+                    fmt="iso", utc=True, key="timestamp"
+                ),
+                structlog.processors.add_log_level,
+                structlog.processors.EventRenamer(to="event"),
+                structlog.processors.JSONRenderer(),
             ],
             logger_factory=structlog.stdlib.LoggerFactory(),
             cache_logger_on_first_use=True,
         )
 
-    def get_logger(self, name=None):
-        """Return a logger named after the calling file, e.g. get_logger(__name__)."""
+    def get_logger(self, name: str | None = None):
+        """Return a structured logger for the given module/file."""
         logger_name = os.path.basename(name or __file__)
         return structlog.get_logger(logger_name)
 
 
 if __name__ == "__main__":
+    # Quick manual test.
     logger = CustomLogger().get_logger(__file__)
-    logger.info("data_ingestion_started", file_name="essay.txt", chunk_size=200)
+    logger.info(
+        "data_ingestion_started",
+        file_name="essay.txt",
+        chunk_size=200,
+    )
+
+
+# =============================================================================
+# CUSTOM LOGGER - PURPOSE & FLOW
+# =============================================================================
+#
+# Purpose:
+# Provides structured JSON logs for debugging, monitoring, and error tracking.
+#
+#   Application Module
+#         │
+#         ▼
+#   logger.info/error/warning()
+#         │
+#         ▼
+#      structlog
+#         │
+#   Add timestamp, level, event
+#         │
+#         ▼
+#      JSON Log
+#         │
+#      ┌──┴───┐
+#      ▼      ▼
+#   Console  logs/*.log
+#
+# Example:
+# logger.info("documents_loaded", count=10)
+#
+# Output:
+# {"count": 10, "timestamp": "...", "level": "info",
+#  "event": "documents_loaded"}
+#
+# =============================================================================

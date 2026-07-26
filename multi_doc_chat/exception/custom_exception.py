@@ -1,63 +1,61 @@
 import sys
 import traceback
-from typing import Optional, cast
+from typing import Optional
 
 
 class DocumentPortalException(Exception):
+    """Exception that also records which file and line the underlying error came from."""
+
     def __init__(self, error_message, error_details: Optional[object] = None):
-        # Convert error to a string
-        norm_msg = str(error_message)
+        self.error_message = str(error_message)
 
-        # Get exception details
-        exc_type = exc_value = exc_tb = None
-        if error_details is None:
-            exc_type, exc_value, exc_tb = sys.exc_info()
-        else:
-            if hasattr(error_details, "exc_info"):  # e.g. sys
-                exc_info_obj = cast(sys, error_details)
-                exc_type, exc_value, exc_tb = exc_info_obj.exc_info()
-            elif isinstance(error_details, BaseException):
-                exc_type, exc_value, exc_tb = (
-                    type(error_details),
-                    error_details,
-                    error_details.__traceback__,
-                )
-            else:
-                exc_type, exc_value, exc_tb = sys.exc_info()
+        exc_type, exc_value, exc_tb = self._get_exc_info(error_details)
 
-        # Find the line where the error occurred
-        last_tb = exc_tb
-        while last_tb and last_tb.tb_next:
-            last_tb = last_tb.tb_next
+        # Walk to the last frame in the traceback, since that is where the
+        # error actually occurred (earlier frames are just the call chain)
+        while exc_tb and exc_tb.tb_next:
+            exc_tb = exc_tb.tb_next
 
-        self.file_name = last_tb.tb_frame.f_code.co_filename if last_tb else "<unknown>"
-        self.lineno = last_tb.tb_lineno if last_tb else -1
-        self.error_message = norm_msg
+        self.file_name = exc_tb.tb_frame.f_code.co_filename if exc_tb else "<unknown>"
+        self.lineno = exc_tb.tb_lineno if exc_tb else -1
 
-        # Save the complete traceback
-        if exc_type and exc_tb:
-            self.traceback_str = "".join(
-                traceback.format_exception(exc_type, exc_value, exc_tb)
-            )
-        else:
-            self.traceback_str = ""
-
-        super().__init__(self.__str__())
-
-    def __str__(self):
-        # Return a readable error message
-        base = (
-            f"Error in [{self.file_name}] at line [{self.lineno}] | "
-            f"Message: {self.error_message}"
+        # Save the full traceback as text, for logging or debugging later
+        self.traceback_str = (
+            "".join(traceback.format_exception(exc_type, exc_value, exc_tb)) if exc_tb else ""
         )
 
-        if self.traceback_str:
-            return f"{base}\nTraceback:\n{self.traceback_str}"
-        return base
+        super().__init__(str(self))
+
+    @staticmethod
+    def _get_exc_info(error_details):
+        """
+        Work out (exc_type, exc_value, exc_tb) no matter what was passed in:
+          - an exception instance, e.g. DocumentPortalException("msg", e)
+          - the sys module, e.g. DocumentPortalException("msg", sys)
+          - nothing, in which case grab whatever exception is currently being handled
+        """
+        if isinstance(error_details, BaseException):
+            return type(error_details), error_details, error_details.__traceback__
+        if hasattr(error_details, "exc_info"):  # the sys module
+            return error_details.exc_info()
+        return sys.exc_info()
+
+    def __str__(self):
+        # Human readable message shown when the exception is printed or logged
+        base = f"Error in [{self.file_name}] at line [{self.lineno}] | Message: {self.error_message}"
+        return f"{base}\nTraceback:\n{self.traceback_str}" if self.traceback_str else base
 
     def __repr__(self):
-        # Developer-friendly representation
+        # Developer friendly representation, useful in a debugger or REPL
         return (
             f"DocumentPortalException(file={self.file_name!r}, "
             f"line={self.lineno}, message={self.error_message!r})"
         )
+
+
+if __name__ == "__main__":
+    # Quick manual check: raise a normal error, then wrap and re-raise it
+    try:
+        1 / 0
+    except Exception as e:
+        raise DocumentPortalException("Division failed", e) from e

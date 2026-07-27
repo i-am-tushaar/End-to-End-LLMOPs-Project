@@ -68,13 +68,8 @@ class ChatIngestor:
             -> Return retriever
     """
 
-    def __init__(
-        self,
-        temp_base: str = "data",
-        faiss_base: str = "faiss_index",
-        use_session_dirs: bool = True,
-        session_id: Optional[str] = None,
-    ):
+    def __init__(self, temp_base: str = "data", faiss_base: str = "faiss_index", 
+        use_session_dirs: bool = True, session_id: Optional[str] = None,):
         """
         Initialize the ingestion pipeline.
 
@@ -111,15 +106,8 @@ class ChatIngestor:
             )
 
         except Exception as e:
-            log.error(
-                "Failed to initialize ChatIngestor",
-                error=str(e),
-            )
-
-            raise DocumentPortalException(
-                "Initialization error in ChatIngestor",
-                e,
-            ) from e
+            log.error("Failed to initialize ChatIngestor", error=str(e))
+            raise DocumentPortalException( "Initialization error in ChatIngestor", e) from e
 
     def _resolve_dir(self, base: Path) -> Path:
         """
@@ -138,10 +126,7 @@ class ChatIngestor:
         """
         target = base / self.session_id if self.use_session else base
 
-        target.mkdir(
-            parents=True,
-            exist_ok=True,
-        )
+        target.mkdir(parents=True, exist_ok=True)
 
         return target
 
@@ -157,20 +142,11 @@ class ChatIngestor:
         Chunking improves retrieval because the embedding model works with
         smaller, focused pieces of text instead of entire documents.
         """
-        splitter = RecursiveCharacterTextSplitter(
-            chunk_size=chunk_size,
-            chunk_overlap=chunk_overlap,
-        )
-
+        splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size,chunk_overlap=chunk_overlap)
         chunks = splitter.split_documents(docs)
 
-        log.info(
-            "Documents split",
-            documents=len(docs),
-            chunks=len(chunks),
-            chunk_size=chunk_size,
-            overlap=chunk_overlap,
-        )
+        log.info("Documents split",documents=len(docs),chunks=len(chunks),chunk_size=chunk_size,
+            overlap=chunk_overlap)
 
         return chunks
 

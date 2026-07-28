@@ -1,27 +1,52 @@
+# ============================================================================
+# Embedding Model Configuration
+# ============================================================================
+
 embedding_model:
-  # Embedding models
+  # Default embedding provider (set EMBEDDING_PROVIDER=huggingface in .env)
+  huggingface:
+    provider: "huggingface"
+    model_name: "sentence-transformers/all-MiniLM-L6-v2"
+    # Other recommended models:
+    # BAAI/bge-small-en-v1.5
+    # BAAI/bge-base-en-v1.5
+    # intfloat/e5-base-v2
+    # intfloat/multilingual-e5-base
+
+  # Optional Google embeddings
   google:
     provider: "google"
     model_name: "models/text-embedding-004"
 
-  huggingface:
-    provider: "huggingface"
-    model_name: "sentence-transformers/all-MiniLM-L6-v2"
-    # Other models: BAAI/bge-small-en-v1.5, intfloat/e5-base-v2
+
+# ============================================================================
+# Retriever Configuration
+# ============================================================================
 
 retriever:
-  top_k: 10                     # Number of documents to retrieve
+  top_k: 10                     # Final number of documents returned
   search_type: "mmr"            # similarity | mmr | similarity_score_threshold
-  fetch_k: 20                   # Documents fetched before MMR
+  fetch_k: 20                   # Documents fetched before MMR reranking
   lambda_mult: 0.5              # 0 = more diversity, 1 = more relevance
 
+
+# ============================================================================
+# LLM Configuration
+# ============================================================================
+
 llm:
+  # Default LLM (set LLM_PROVIDER=groq in .env)
   groq:
     provider: "groq"
     model_name: "openai/gpt-oss-20b"
-    temperature: 0              # Lower = more deterministic
-    max_output_tokens: 2048     # Maximum response length
+    temperature: 0
+    max_output_tokens: 2048
 
+    # Other supported models:
+    # llama-3.3-70b-versatile
+    # openai/gpt-oss-120b
+
+  # Optional Google LLM
   google:
     provider: "google"
     model_name: "gemini-2.0-flash"

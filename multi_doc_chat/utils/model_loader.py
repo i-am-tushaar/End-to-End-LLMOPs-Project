@@ -144,7 +144,7 @@ if __name__ == "__main__":
 
     # Test the LLM
     llm = loader.load_llm()
-    print(llm.invoke("Hello, how are you?").content))
+    print(llm.invoke("Hello, how are you?").content)
 
 
 # =============================================================================

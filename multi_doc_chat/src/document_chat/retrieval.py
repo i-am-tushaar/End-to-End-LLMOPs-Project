@@ -3,7 +3,7 @@ import os
 from operator import itemgetter
 from typing import List, Optional, Dict, Any
 
-from langchain_core.messages import BaseMessage
+from langchain_core.messages import BaseMessage, AIMessage
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_community.vectorstores import FAISS
@@ -42,6 +42,13 @@ class ConversationalRAG:
             # Lazy pieces
             self.retriever = retriever
             self.chain = None
+            # Stores the latest AIMessage returned by the LLM.
+            # This allows access to tokens, latency, finish reason, etc.
+            self.last_ai_message: Optional[AIMessage] = None
+
+            # Stores usage statistics of the latest response.
+            self.last_usage: Dict[str, Any] = {}     
+
             if self.retriever is not None:
                 self._build_lcel_chain()
 

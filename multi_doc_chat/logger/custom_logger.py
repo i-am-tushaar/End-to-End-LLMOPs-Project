@@ -14,16 +14,22 @@ import structlog
 class CustomLogger:
     """Configure and provide a structured JSON logger."""
 
+    
     def __init__(self, log_dir: str = "logs"):
-        """Create the log directory/file and configure logging."""
+        """Create the project-level logs directory and timestamped log file."""
 
-        # Create logs/ directory if it does not exist.
-        logs_dir = os.path.join(os.getcwd(), log_dir)
-        os.makedirs(logs_dir, exist_ok=True)
+        from pathlib import Path
 
-        # Each application run gets a timestamped log file.
+        # Project root: End-to-End-LLMOPs-Project
+        project_root = Path(r"F:\AI Projects\End-to-End-LLMOPs-Project")
+
+        # Always store logs in the project root/logs directory
+        logs_dir = project_root / log_dir
+        logs_dir.mkdir(parents=True, exist_ok=True)
+
+        # Create a timestamped log file
         log_file = f"{datetime.now().strftime('%m_%d_%Y_%H_%M_%S')}.log"
-        self.log_file_path = os.path.join(logs_dir, log_file)
+        self.log_file_path = str(logs_dir / log_file)
 
         self._configure()
 

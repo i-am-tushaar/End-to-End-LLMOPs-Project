@@ -1,0 +1,56 @@
+The 2025 AI Engineering Report Source: Amplify Partners, “The 2025 AI
+Engineering Report” URL:
+https://www.amplifypartners.com/blog-posts/the-2025-ai-engineering-report
+Published: June 24, 2025 Author: Barr Yaron
+
+Purpose Amplify Partners surveyed engineers who build AI systems. The
+report discusses model usage, retrieval-augmented generation (RAG),
+fine-tuning, multimodal systems, AI agents, monitoring, evaluation, and
+vector databases. The findings describe the survey population and should
+not be treated as universal statistics for every AI team.
+
+Key findings - For customer-facing applications, OpenAI models account
+for 3 of the 5 most popular models and 5 of the top 10. - 70% of
+respondents said they use RAG in some form. - More than 50% of
+respondents update their models at least monthly; 17% update weekly. -
+70% update prompts at least monthly, and about 10% update prompts
+daily. - 41% of respondents said they fine-tune models. Task accuracy
+was the most commonly stated fine-tuning goal. Respondents mentioned
+parameter-efficient techniques such as LoRA and QLoRA, as well as DPO
+and reinforcement fine-tuning. - More than half of respondents use LLMs
+for both internal and external use cases. Code generation and code
+intelligence were prominent use cases. - 94% of LLM users use models for
+at least two use cases, and 82% use them for at least three. - LangChain
+was the most frequently selected framework for building generative-AI
+applications, with more than twice as many respondents selecting it as
+the next most popular option, LlamaIndex. - Audio had a notable
+potential adoption wave: 37% of respondents who were not currently using
+audio said they planned to adopt it. - 80% said LLMs were working well
+at work, while fewer than 20% said the same about agents. - Among
+respondents with agents in production, most reported that agents had
+write access, commonly with a human in the loop. 13% said their agents
+could act completely independently. - For monitoring, 60% used standard
+observability, and more than 50% relied on offline evaluation. Human
+review was the most popular approach for evaluating model or system
+accuracy. - 65% of respondents used a dedicated vector database. - 35%
+said they primarily self-hosted their vector database, while 30%
+primarily used a third-party provider. - More than 40% of respondents
+were not willing to pay more for inference-time compute. - Most
+respondents expected open-source models to eventually converge with
+closed-source models. - On average, respondents estimated that 26% of
+the US Gen Z population would have an AI boyfriend or girlfriend.
+
+Answers to evaluation questions Q: For customer-facing applications,
+which company’s models dominate the top rankings? A: OpenAI. The report
+says OpenAI models made up 3 of the top 5 and half of the top 10 most
+popular models for customer-facing applications.
+
+Q: What percentage of respondents are using RAG in some form? A: 70%.
+
+Q: How often are most respondents updating their models? A: More than
+50% update their models at least monthly, including 17% who update
+weekly.
+
+Important note This is an original, concise study guide based on the
+report, not a verbatim copy of the article. For full context, charts,
+survey details, and caveats, consult the original source URL above.

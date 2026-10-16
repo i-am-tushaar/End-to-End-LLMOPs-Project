@@ -1,24 +1,37 @@
+
 python-dotenv==1.1.1
 structlog
 
+# LangChain
 langchain==0.3.27
 langchain-community==0.3.27
 langchain-core==0.3.72
-
+langchain-text-splitters==0.3.9
 langchain-groq==0.3.6
 langchain-google-genai==2.1.8
 langchain-openai==0.2.10
+langchain-huggingface==0.3.1
+langsmith==0.10.10
 
+# Document processing
+pypdf
 docx2txt==0.9
-ipykernel==6.30.0
-python-multipart==0.0.20
+
+# Embeddings
+sentence-transformers
+transformers==5.17.0
+tokenizers==0.23.1
+
+# Vector database
 faiss-cpu
 
+# API
 fastapi==0.115.6
 uvicorn==0.32.1
+python-multipart==0.0.20
 Jinja2==3.1.4
 
-langsmith
+# Other dependencies
+ipykernel==6.30.0
 openai
 pandas
-pypdf

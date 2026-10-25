@@ -4,12 +4,132 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Web Page</title>
+    <meta name="theme-color" content="#101828">
+    <title>MultiDoc AI | Document Assistant</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='styles.css') }}">
+    <script src="{{ url_for('static', path='script.js') }}" defer></script>
 </head>
 <body>
+    <div class="app-layout">
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-icon">M</div>
+                <div>
+                    <h2>MultiDoc AI</h2>
+                    <p>Document Intelligence</p>
+                </div>
+            </div>
 
-    <h1>Hello, World!</h1>
-    <p>Welcome to my website.</p>
+            <div class="sidebar-section">
+                <span class="section-label">WORKSPACE</span>
+                <div class="workspace-item active">
+                    <span>✦</span> Document Chat
+                </div>
+            </div>
 
+            <div class="sidebar-info">
+                <div class="info-icon">✧</div>
+                <h3>Your AI workspace</h3>
+                <p>Upload documents and ask questions. Get answers grounded in your content.</p>
+            </div>
+
+            <div class="sidebar-footer">
+                <span class="status-dot" id="sidebar-status-dot"></span>
+                <span id="sidebar-status">Checking backend...</span>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="topbar">
+                <div>
+                    <p class="eyebrow">AI-POWERED KNOWLEDGE</p>
+                    <h1>Document Assistant</h1>
+                </div>
+                <a class="docs-link" href="/docs" target="_blank" rel="noopener noreferrer">
+                    API Docs ↗
+                </a>
+            </header>
+
+            <section class="welcome-section">
+                <div class="welcome-icon">✦</div>
+                <h2>Chat with your documents</h2>
+                <p>Upload your files, let AI understand the content, and ask questions in plain language.</p>
+            </section>
+
+            <section class="upload-card">
+                <div class="card-heading">
+                    <div>
+                        <h3>Upload documents</h3>
+                        <p>Add one or more files to create your knowledge base.</p>
+                    </div>
+                    <span class="step-badge">STEP 01</span>
+                </div>
+
+                <form id="upload-form">
+                    <label for="file-input" class="drop-zone" id="drop-zone">
+                        <div class="upload-icon">↑</div>
+                        <strong>Choose files or drag them here</strong>
+                        <span>PDF, TXT, DOCX, or other backend-supported formats</span>
+                        <span class="browse-label">Browse files</span>
+                    </label>
+
+                    <input
+                        type="file"
+                        id="file-input"
+                        name="files"
+                        multiple
+                        required
+                    >
+
+                    <div id="selected-files" class="selected-files"></div>
+
+                    <button type="submit" id="upload-button" class="primary-button">
+                        <span>Upload &amp; Index Documents</span>
+                        <span>→</span>
+                    </button>
+                </form>
+
+                <div id="upload-status" class="status-message" role="status" aria-live="polite"></div>
+            </section>
+
+            <section class="chat-card">
+                <div class="card-heading chat-heading">
+                    <div>
+                        <h3>Conversation</h3>
+                        <p id="chat-subtitle">Upload and index documents to begin.</p>
+                    </div>
+                    <span class="step-badge">STEP 02</span>
+                </div>
+
+                <div id="chat-messages" class="chat-messages" aria-live="polite">
+                    <div class="empty-state" id="empty-state">
+                        <div class="empty-icon">✧</div>
+                        <h3>Your conversation starts here</h3>
+                        <p>Once your documents are indexed, ask a question about their content.</p>
+                    </div>
+                </div>
+
+                <form id="chat-form" class="chat-form">
+                    <label for="message-input" class="sr-only">Ask a question</label>
+                    <textarea
+                        id="message-input"
+                        placeholder="Upload documents first..."
+                        rows="1"
+                        maxlength="5000"
+                        disabled
+                        required
+                    ></textarea>
+                    <button type="submit" id="send-button" class="send-button" disabled>
+                        Send ↑
+                    </button>
+                </form>
+                <p class="input-hint">Press Enter to send · Shift + Enter for a new line</p>
+            </section>
+
+            <footer class="page-footer">
+                Built with FastAPI · LangChain · FAISS · RAG
+            </footer>
+        </main>
+    </div>
 </body>
 </html>

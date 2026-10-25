@@ -4,7 +4,7 @@ import yaml
 from multi_doc_chat.utils.config_loader import load_config
 
 
-#Test 1: Load valid configuration
+# Test 1: Load valid configuration
 # Objective: Verify that load_config() reads a valid YAML file
 # and returns its contents as a Python dictionary.
 def test_load_config_success(tmp_path):

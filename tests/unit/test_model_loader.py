@@ -6,7 +6,7 @@ from multi_doc_chat.exception.custom_exception import DocumentPortalException
 from multi_doc_chat.utils.model_loader import ApiKeyManager, ModelLoader
 
 
-# ## Test 1: Load API keys from environment variables
+# Test 1: Load API keys from environment variables
 # Objective: Verify that ApiKeyManager loads Google and Groq API keys
 # from environment variables.
 def test_api_key_manager_loads_keys_from_environment(monkeypatch):
@@ -21,7 +21,7 @@ def test_api_key_manager_loads_keys_from_environment(monkeypatch):
     assert manager.get("GROQ_API_KEY") == "test-groq-key"
 
 
-# ## Test 2: Handle missing API keys
+# Test 2: Handle missing API keys
 # Objective: Verify that ApiKeyManager raises DocumentPortalException
 # when the required API keys are unavailable.
 def test_api_key_manager_raises_error_when_keys_missing(monkeypatch):
@@ -37,7 +37,7 @@ def test_api_key_manager_raises_error_when_keys_missing(monkeypatch):
         ApiKeyManager()
 
 
-# ## Test 3: Load API keys from ECS secrets
+# Test 3: Load API keys from ECS secrets
 # Objective: Verify that ApiKeyManager extracts API keys from
 # a valid JSON ECS secret stored in an environment variable.
 def test_api_key_manager_loads_keys_from_ecs_secret(monkeypatch):
@@ -56,7 +56,7 @@ def test_api_key_manager_loads_keys_from_ecs_secret(monkeypatch):
     assert manager.get("GROQ_API_KEY") == "ecs-groq-key"
 
 
-# ## Test 4: Handle invalid ECS secrets
+# Test 4: Handle invalid ECS secrets
 # Objective: Verify that invalid ECS JSON does not prevent API keys
 # from being loaded from valid environment variables.
 def test_api_key_manager_handles_invalid_ecs_secret(monkeypatch):
@@ -71,7 +71,7 @@ def test_api_key_manager_handles_invalid_ecs_secret(monkeypatch):
     assert manager.get("GROQ_API_KEY") == "test-groq-key"
 
 
-# ## Test 5: Request a missing API key
+# Test 5: Request a missing API key
 # Objective: Verify that requesting an API key that is not configured
 # raises a KeyError with a meaningful error message.
 def test_api_key_manager_get_missing_key(monkeypatch):
@@ -93,7 +93,7 @@ def test_api_key_manager_get_missing_key(monkeypatch):
         manager.get("UNKNOWN_KEY")
 
 
-# ## Test 6: Load Google embeddings
+# Test 6: Load Google embeddings
 # Objective: Verify that the Google embedding model is initialized
 # with the configured model name and Google API key.
 def test_load_google_embeddings_success(monkeypatch):
@@ -127,7 +127,7 @@ def test_load_google_embeddings_success(monkeypatch):
     )
 
 
-# ## Test 7: Load Hugging Face embeddings
+# Test 7: Load Hugging Face embeddings
 # Objective: Verify that the Hugging Face embedding model is initialized
 # with the configured model name without requesting an API key.
 def test_load_huggingface_embeddings_success(monkeypatch):
@@ -162,7 +162,7 @@ def test_load_huggingface_embeddings_success(monkeypatch):
     loader.api_keys.get.assert_not_called()
 
 
-# ## Test 8: Handle unsupported embedding provider
+# Test 8: Handle unsupported embedding provider
 # Objective: Verify that an unsupported embedding provider raises
 # DocumentPortalException instead of loading an invalid provider.
 def test_load_embeddings_unsupported_provider(monkeypatch):
@@ -184,7 +184,7 @@ def test_load_embeddings_unsupported_provider(monkeypatch):
         loader.load_embeddings()
 
 
-# ## Test 9: Handle missing embedding provider configuration
+# Test 9: Handle missing embedding provider configuration
 # Objective: Verify that a provider selected through the environment
 # but absent from the configuration raises DocumentPortalException.
 def test_load_embeddings_missing_provider_config(monkeypatch):
@@ -206,7 +206,7 @@ def test_load_embeddings_missing_provider_config(monkeypatch):
         loader.load_embeddings()
 
 
-# ## Test 10: Load Google Gemini LLM
+# Test 10: Load Google Gemini LLM
 # Objective: Verify that the Google Gemini LLM is initialized with
 # the configured model name, API key, temperature, and output token limit.
 def test_load_google_llm_success(monkeypatch):
@@ -246,7 +246,7 @@ def test_load_google_llm_success(monkeypatch):
     )
 
 
-# ## Test 11: Load Groq LLM
+# Test 11: Load Groq LLM
 # Objective: Verify that the Groq LLM is initialized with the configured
 # model name, API key, temperature, and maximum token count.
 def test_load_groq_llm_success(monkeypatch):
@@ -286,7 +286,7 @@ def test_load_groq_llm_success(monkeypatch):
     )
 
 
-# ## Test 12: Handle unsupported LLM provider
+# Test 12: Handle unsupported LLM provider
 # Objective: Verify that an unsupported LLM provider raises
 # DocumentPortalException instead of loading an invalid provider.
 def test_load_llm_unsupported_provider(monkeypatch):
@@ -308,7 +308,7 @@ def test_load_llm_unsupported_provider(monkeypatch):
         loader.load_llm()
 
 
-# ## Test 13: Handle missing LLM provider configuration
+# Test 13: Handle missing LLM provider configuration
 # Objective: Verify that selecting an LLM provider absent from the
 # configuration raises DocumentPortalException.
 def test_load_llm_missing_provider_config(monkeypatch):

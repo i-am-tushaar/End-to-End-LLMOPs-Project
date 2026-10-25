@@ -1,4 +1,3 @@
-
 from pathlib import Path
 
 import pytest
@@ -7,7 +6,7 @@ import multi_doc_chat.logger.custom_logger as logger_module
 from multi_doc_chat.logger.custom_logger import CustomLogger
 
 
-# ## Test 1: Initialize the custom logger
+# Test 1: Initialize the custom logger
 # Objective: Verify that CustomLogger creates the logs directory
 # and a timestamped log file during initialization.
 def test_custom_logger_initialization(tmp_path, monkeypatch):
@@ -39,7 +38,7 @@ import structlog
 from multi_doc_chat.logger.custom_logger import CustomLogger
 
 
-# ## Test 2: Configure logging handlers
+# Test 2: Configure logging handlers
 # Objective: Verify that _configure() sets the INFO level
 # and configures console and file handlers.
 def test_configure_sets_handlers_and_info_level(monkeypatch, tmp_path):
@@ -79,7 +78,7 @@ import multi_doc_chat.logger.custom_logger as logger_module
 from multi_doc_chat.logger.custom_logger import CustomLogger
 
 
-# ## Test 3: Return a structured logger
+# Test 3: Return a structured logger
 # Objective: Verify that get_logger() returns the logger
 # provided by structlog for the requested module name.
 def test_get_logger_returns_structured_logger(monkeypatch):
@@ -99,7 +98,7 @@ def test_get_logger_returns_structured_logger(monkeypatch):
 
 
 
-# ## Test 4: Use the default logger name
+# Test 4: Use the default logger name
 # Objective: Verify that get_logger() uses the current module's
 # filename when the caller does not provide a name.
 def test_get_logger_uses_default_name(monkeypatch):
@@ -124,7 +123,7 @@ def test_get_logger_uses_default_name(monkeypatch):
 
 
 
-# ## Test 5: Configure JSON log rendering
+# Test 5: Configure JSON log rendering
 # Objective: Verify that _configure() includes JSONRenderer
 # in the structlog processor configuration.
 def test_configure_includes_json_renderer(monkeypatch, tmp_path):
@@ -151,7 +150,7 @@ def test_configure_includes_json_renderer(monkeypatch, tmp_path):
 
 
 
-# ## Test 6: Configure event renaming
+# Test 6: Configure event renaming
 # Objective: Verify that _configure() includes EventRenamer
 # configured to rename the event field to "event".
 def test_configure_includes_event_renamer(monkeypatch, tmp_path):
@@ -178,7 +177,7 @@ def test_configure_includes_event_renamer(monkeypatch, tmp_path):
 
 
 
-# ## Test 7: Configure timestamp generation
+# Test 7: Configure timestamp generation
 # Objective: Verify that _configure() includes TimeStamper
 # with ISO formatting, UTC timestamps, and the "timestamp" key.
 def test_configure_includes_timestamp_processor(monkeypatch, tmp_path):
@@ -205,7 +204,7 @@ def test_configure_includes_timestamp_processor(monkeypatch, tmp_path):
 
 
 
-# ## Test 8: Configure log level processing
+# Test 8: Configure log level processing
 # Objective: Verify that _configure() includes the processor
 # that adds the log level to structured log entries.
 def test_configure_includes_log_level_processor(monkeypatch, tmp_path):
@@ -229,7 +228,7 @@ def test_configure_includes_log_level_processor(monkeypatch, tmp_path):
 
 
 
-# ## Test 9: Extract the filename from a full path
+# Test 9: Extract the filename from a full path
 # Objective: Verify that get_logger() passes only the basename
 # of the supplied path to structlog.get_logger().
 def test_get_logger_extracts_basename(monkeypatch):

@@ -4,7 +4,7 @@ import yaml
 from multi_doc_chat.utils.config_loader import load_config
 
 
-# ## Test 1: Load valid configuration
+# Test 1: Load valid configuration
 # Objective: Verify that load_config() reads a valid YAML file
 # and returns its contents as a Python dictionary.
 def test_load_config_success(tmp_path):
@@ -26,7 +26,7 @@ def test_load_config_success(tmp_path):
     assert result == {"llm": {"provider": "google"}}
 
 
-# ## Test 2: Missing configuration file
+# Test 2: Missing configuration file
 # Objective: Verify that load_config() raises FileNotFoundError
 # when the requested configuration file does not exist.
 def test_load_config_missing_file(tmp_path):
@@ -43,7 +43,7 @@ def test_load_config_missing_file(tmp_path):
         load_config(str(config_file))
 
 
-# ## Test 3: Empty configuration file
+# Test 3: Empty configuration file
 # Objective: Verify that an empty YAML file returns an empty dictionary.
 def test_load_config_empty_file(tmp_path):
     """Test loading an empty YAML configuration."""
@@ -61,7 +61,7 @@ def test_load_config_empty_file(tmp_path):
     assert result == {}
 
 
-# ## Test 4: Invalid YAML syntax
+# Test 4: Invalid YAML syntax
 # Objective: Verify that invalid YAML syntax raises yaml.YAMLError.
 def test_load_config_invalid_yaml(tmp_path):
     """Test handling of invalid YAML syntax."""
@@ -80,7 +80,7 @@ def test_load_config_invalid_yaml(tmp_path):
         load_config(str(config_file))
 
 
-# ## Test 5: Relative configuration path
+# Test 5: Relative configuration path
 # Objective: Verify that a relative configuration path is resolved
 # from the project root.
 def test_load_config_relative_path(tmp_path, monkeypatch):

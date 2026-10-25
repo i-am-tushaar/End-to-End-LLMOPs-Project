@@ -36,3 +36,7 @@ ipykernel==6.30.0
 openai
 pandas
 
+# Testing
+pytest==8.4.2
+pytest-cov==7.0.0
+httpx==0.28.1

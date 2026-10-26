@@ -38,3 +38,8 @@ dependencies = [
 dev = [
     "pip>=26.2.1",
 ]
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore:'asyncio.iscoroutinefunction' is deprecated:DeprecationWarning",
+]

@@ -40,3 +40,9 @@ pandas
 pytest==8.4.2
 pytest-cov==7.0.0
 httpx==0.28.1
+
+# Testing and LLM evaluation
+pytest==8.4.2
+pytest-cov==7.0.0
+httpx==0.28.1
+deepeval==4.3.1

@@ -1,0 +1,32 @@
+
+[
+  {
+    "id": "retriever_001",
+    "input": "What is the Transformer architecture?",
+    "expected_output": "The Transformer is a neural network architecture based solely on attention mechanisms, dispensing with recurrence and convolutions. It uses stacked encoder and decoder layers.",
+    "expected_facts": [
+      "The Transformer relies on attention mechanisms.",
+      "The architecture dispenses with recurrence and convolutions.",
+      "The Transformer has encoder and decoder stacks."
+    ]
+  },
+  {
+    "id": "retriever_002",
+    "input": "What is self-attention in the Transformer?",
+    "expected_output": "Self-attention computes representations of input and output sequences using relationships between sequence elements, without relying on recurrent sequence processing.",
+    "expected_facts": [
+      "Self-attention computes representations of input and output sequences.",
+      "The Transformer relies entirely on self-attention for these representations."
+    ]
+  },
+  {
+    "id": "retriever_003",
+    "input": "Why does the Transformer use multi-head attention?",
+    "expected_output": "Multi-head attention allows the model to jointly attend to information from different representation subspaces at different positions. Using a single attention head can limit this ability.",
+    "expected_facts": [
+      "Multi-head attention attends to different representation subspaces.",
+      "It attends to information at different positions.",
+      "A single attention head has limitations compared with multiple heads."
+    ]
+  }
+]

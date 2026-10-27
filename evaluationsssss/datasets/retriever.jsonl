@@ -1,0 +1,2 @@
+{"id":"retrieval_001","question":"What is the main idea of the attention mechanism?","relevant_chunk_ids":["chunk_001","chunk_004"]}
+{"id":"retrieval_002","question":"How does multi-head attention work?","relevant_chunk_ids":["chunk_010"]}

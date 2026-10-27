@@ -1,0 +1,2 @@
+{"id":"app_001","question":"Summarize the document's main argument.","expected_answer":"A concise summary covering the central argument and supporting points.","required_points":["central argument","supporting points"],"expected_scope":"document_question_answering"}
+{"id":"app_002","question":"List the key conclusions.","expected_answer":"A summary of the conclusions supported by the document.","required_points":["key conclusions"],"expected_scope":"document_question_answering"}

@@ -1,0 +1,70 @@
+{
+  "generated_at": "2026-10-27T12:14:12.048840+00:00",
+  "index_path": "faiss_index\\session_20261026_215230_88296173",
+  "embedding_model": "Configured by ModelLoader",
+  "judge_model": "openai/gpt-oss-120b",
+  "top_k": 3,
+  "threshold": 0.7,
+  "results": [
+    {
+      "id": "retriever_001",
+      "input": "What is the Transformer architecture?",
+      "retrieved_chunks": 3,
+      "retrieved_context": [
+        "the effort to evaluate this idea. Ashish, with Illia, designed and implemented the ﬁrst Transformer models and",
+        "Figure 1: The Transformer - model architecture.\n3.1 Encoder and Decoder Stacks\nEncoder: The encoder is composed of a stack of N = 6 identical layers. Each layer has two",
+        "mechanism. We propose a new simple network architecture, the Transformer,\nbased solely on attention mechanisms, dispensing with recurrence and convolutions"
+      ],
+      "contextual_precision": {
+        "score": 1.0,
+        "passed": true,
+        "reason": "The score is 1.00 because all three retrieval‑context nodes are relevant and correctly ordered: node 1’s reason cites \"designed and implemented the first Transformer models\", node 2 mentions \"Figure 1: The Transformer - model architecture\", and node 3 notes the model is \"based solely on attention mechanisms, dispensing with recurrence and convolutions\". With no irrelevant nodes to push down, the contextual precision is perfect."
+      },
+      "contextual_recall": {
+        "score": 1.0,
+        "passed": true,
+        "reason": "The score is 1.00 because sentence 1 aligns with node 3 (attention‑only architecture) and sentence 2 aligns with node 2 (stacked encoder/decoder layers) in the retrieval context, showing perfect coverage."
+      }
+    },
+    {
+      "id": "retriever_002",
+      "input": "What is self-attention in the Transformer?",
+      "retrieved_chunks": 3,
+      "retrieved_context": [
+        "3.2.3 Applications of Attention in our Model\nThe Transformer uses multi-head attention in three different ways:",
+        "To the best of our knowledge, however, the Transformer is the ﬁrst transduction model relying\nentirely on self-attention to compute representations of its input and output without using sequence-",
+        "As side beneﬁt, self-attention could yield more interpretable models. We inspect attention distributions"
+      ],
+      "contextual_precision": {
+        "score": 1.0,
+        "passed": true,
+        "reason": "The score is 1.00 because the first node (rank 1) notes \"The Transformer uses multi-head attention\", the second node (rank 2) states the Transformer \"relies entirely on self-attention to compute representations of its input and output without using sequence\", and the third node (rank 3) mentions \"self-attention could yield more interpretable models\"—all three retrieval nodes are relevant, so there are no irrelevant nodes to lower the score."
+      },
+      "contextual_recall": {
+        "score": 1.0,
+        "passed": true,
+        "reason": "The score is 1.00 because sentence 1 aligns directly with node 2 in the retrieval context, which explicitly mentions self‑attention computing representations without using recurrent processing."
+      }
+    },
+    {
+      "id": "retriever_003",
+      "input": "Why does the Transformer use multi-head attention?",
+      "retrieved_chunks": 3,
+      "retrieved_context": [
+        "3.2.3 Applications of Attention in our Model\nThe Transformer uses multi-head attention in three different ways:",
+        "[10], consuming the previously generated symbols as additional input when generating the next.\nThe Transformer follows this overall architecture using stacked self-attention and point-wise, fully",
+        "Multi-head attention allows the model to jointly attend to information from different representation\nsubspaces at different positions. With a single attention head, averaging inhibits this."
+      ],
+      "contextual_precision": {
+        "score": 0.3333333333333333,
+        "passed": false,
+        "reason": "The score is 0.33 because the first two nodes (ranks 1 and 2) are irrelevant – the first says \"The text only states that \\\"The Transformer uses multi-head attention in three different ways\\\" but does not explain the purpose\" and the second notes it \"describes the overall architecture ... without mentioning why multi‑head attention is used\" – while the only relevant node is rank 3, which says \"Multi-head attention allows the model to jointly attend to information from different representation subspaces...\". Since the relevant node is ranked last, contextual precision is low."
+      },
+      "contextual_recall": {
+        "score": 1.0,
+        "passed": true,
+        "reason": "The score is 1.00 because sentence 1 and sentence 2 are each directly backed by node 3 in the retrieval context, which contains the exact phrasing for the multi‑head attention benefit and explicitly notes the limitation of a single head—so the recall is perfect!"
+      }
+    }
+  ]
+}

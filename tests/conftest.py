@@ -7,6 +7,8 @@ import pathlib
 import sys
 import pytest
 
+from langchain_core.runnables import RunnableLambda
+
 os.environ.setdefault("PYTHONPATH", str(pathlib.Path(__file__).resolve().parents[1] / "multi_doc_chat"))
 os.environ.setdefault("GROQ_API_KEY", "dummy")
 os.environ.setdefault("GOOGLE_API_KEY", "dummy")
@@ -59,16 +61,17 @@ class _StubEmbeddings:
     def __call__(self, text: str):
         return [0.0, 0.1, 0.2]
 
+class _StubLLM(RunnableLambda):
+    """A lightweight LLM stub compatible with LangChain LCEL."""
 
-class _StubLLM:
-    def invoke(self, input):
-        return "stubbed answer"
+    def __init__(self):
+        super().__init__(lambda prompt: "stubbed answer")
 
 
 @pytest.fixture
 def stub_model_loader(monkeypatch):
     # Patch both module paths to cover imports via `utils.model_loader` and `multi_doc_chat.utils.model_loader`
-    import utils.model_loader as ml_mod
+    import multi_doc_chat.utils.model_loader as ml_mod
     from multi_doc_chat.utils import model_loader as ml_mod2
 
     class FakeApiKeyMgr:

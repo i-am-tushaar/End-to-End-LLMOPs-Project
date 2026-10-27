@@ -1,0 +1,108 @@
+{
+  "evaluation_type": "pipeline_level_rag_triad",
+  "generated_at": "2026-10-27T14:09:30.811949+00:00",
+  "dataset": "evaluation\\datasets\\rag_triad_eval.json",
+  "faiss_index": "faiss_index\\session_20261026_215230_88296173",
+  "judge_model": "openai/gpt-oss-20b",
+  "threshold": 0.7,
+  "total_cases": 3,
+  "successful_cases": 3,
+  "failed_cases": 0,
+  "summary": {
+    "contextual_relevancy": {
+      "average_score": 0.8667,
+      "successful_evaluations": 3,
+      "failed_evaluations": 0,
+      "passed_cases": 2
+    },
+    "faithfulness": {
+      "average_score": 1.0,
+      "successful_evaluations": 3,
+      "failed_evaluations": 0,
+      "passed_cases": 3
+    },
+    "answer_relevancy": {
+      "average_score": 1.0,
+      "successful_evaluations": 3,
+      "failed_evaluations": 0,
+      "passed_cases": 3
+    }
+  },
+  "results": [
+    {
+      "id": "rag_triad_001",
+      "input": "What is the Transformer architecture?",
+      "expected_output": "The Transformer is a neural network architecture based on attention mechanisms. It uses encoder and decoder components and does not rely on recurrence or convolution to process sequences.",
+      "actual_output": "The Transformer is a neural network architecture that relies solely on attention mechanisms, eliminating recurrence and convolutions. It consists of an encoder stack of N = 6 identical layers and a corresponding decoder stack, each layer containing two sub‑layers. This design enables efficient parallel processing of sequence data.",
+      "retrieved_context_count": 3,
+      "metrics": {
+        "contextual_relevancy": {
+          "score": 1.0,
+          "passed": true,
+          "reason": "The score is 1.00 because the context directly explains the Transformer architecture, e.g., \"We propose a new simple network architecture, the Transformer, based solely on attention mechanisms...\" and \"Figure 1: The Transformer - model architecture.\""
+        },
+        "faithfulness": {
+          "score": 1.0,
+          "passed": true,
+          "reason": "The score is 1.00 because there are no contradictions, indicating perfect alignment between the actual output and the retrieval context!"
+        },
+        "answer_relevancy": {
+          "score": 1.0,
+          "passed": true,
+          "reason": "The score is 1.00 because the answer fully addresses the question with no irrelevant content."
+        }
+      },
+      "errors": []
+    },
+    {
+      "id": "rag_triad_002",
+      "input": "What is self-attention in the Transformer?",
+      "expected_output": "Self-attention allows each token in a sequence to use information from other tokens in the same sequence to compute its representation.",
+      "actual_output": "Self‑attention in the Transformer is a mechanism that lets each token in a sequence attend to every other token to compute its representation, without using recurrence or convolution. It relies entirely on attention to capture dependencies across the input and output. This approach can also make the model’s decisions more interpretable by inspecting the attention distributions.",
+      "retrieved_context_count": 3,
+      "metrics": {
+        "contextual_relevancy": {
+          "score": 1.0,
+          "passed": true,
+          "reason": "The score is 1.00 because the retrieval context contains statements that directly address self-attention, such as \"the Transformer is the first transduction model relying entirely on self-attention...\" and \"The Transformer uses multi-head attention...\"."
+        },
+        "faithfulness": {
+          "score": 1.0,
+          "passed": true,
+          "reason": "The score is 1.00 because there are no contradictions, indicating perfect alignment between the actual output and the retrieval context!"
+        },
+        "answer_relevancy": {
+          "score": 1.0,
+          "passed": true,
+          "reason": "The score is 1.00 because the answer fully addresses the question with no irrelevant content."
+        }
+      },
+      "errors": []
+    },
+    {
+      "id": "rag_triad_003",
+      "input": "Why does the Transformer use multi-head attention?",
+      "expected_output": "Multi-head attention allows the Transformer to attend to information from different representation subspaces at different positions, helping it capture different relationships and patterns.",
+      "actual_output": "The Transformer uses multi‑head attention so it can jointly attend to information from multiple representation subspaces at different positions, rather than averaging everything into a single head. This lets the model capture diverse relationships and patterns in the data. Multi‑head attention is employed in three ways: self‑attention, encoder‑decoder attention, and the final feed‑forward layers.",
+      "retrieved_context_count": 3,
+      "metrics": {
+        "contextual_relevancy": {
+          "score": 0.6,
+          "passed": false,
+          "reason": "The score is 0.60 because the context contains relevant statements such as \"The Transformer uses multi-head attention in three different ways.\" and \"Multi-head attention allows the model to jointly attend to information from different representation subspaces at different positions.\", but it also includes unrelated content like \"The statement talks about \"consuming the previously generated symbols as additional input when generating the next\", which is unrelated to multi-head attention.\" and \"The statement mentions \"stacked self-attention and point-wise, fully\" but does not address multi-head attention.\""
+        },
+        "faithfulness": {
+          "score": 1.0,
+          "passed": true,
+          "reason": "The score is 1.00 because there are no contradictions, indicating perfect alignment between the actual output and the retrieval context!"
+        },
+        "answer_relevancy": {
+          "score": 1.0,
+          "passed": true,
+          "reason": "The score is 1.00 because the answer fully addresses the question with no irrelevant content."
+        }
+      },
+      "errors": []
+    }
+  ]
+}

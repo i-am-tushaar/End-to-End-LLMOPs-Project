@@ -1,0 +1,17 @@
+[
+  {
+    "id": "rag_triad_001",
+    "input": "What is the Transformer architecture?",
+    "expected_output": "The Transformer is a neural network architecture based on attention mechanisms. It uses encoder and decoder components and does not rely on recurrence or convolution to process sequences."
+  },
+  {
+    "id": "rag_triad_002",
+    "input": "What is self-attention in the Transformer?",
+    "expected_output": "Self-attention allows each token in a sequence to use information from other tokens in the same sequence to compute its representation."
+  },
+  {
+    "id": "rag_triad_003",
+    "input": "Why does the Transformer use multi-head attention?",
+    "expected_output": "Multi-head attention allows the Transformer to attend to information from different representation subspaces at different positions, helping it capture different relationships and patterns."
+  }
+]

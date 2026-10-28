@@ -1,0 +1,23 @@
+
+[
+  {
+    "id": "ops_001",
+    "input": "What is the main topic of the document?"
+  },
+  {
+    "id": "ops_002",
+    "input": "Explain the attention mechanism in simple language."
+  },
+  {
+    "id": "ops_003",
+    "input": "How does the document describe abstractive summarization?"
+  },
+  {
+    "id": "ops_004",
+    "input": "Summarize the key ideas from the document."
+  },
+  {
+    "id": "ops_005",
+    "input": "Give one example that helps explain the main concept."
+  }
+]

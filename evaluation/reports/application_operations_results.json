@@ -1,0 +1,424 @@
+{
+    "evaluation_name": "Application Operations Evaluation",
+    "evaluation_timestamp_utc": "2026-10-28T14:35:48.252818+00:00",
+    "dataset_path": "F:\\AI Projects\\End-to-End-LLMOPs-Project\\evaluation\\datasets\\application_operations_eval.json",
+    "repeats_per_question": 3,
+    "test_cases_count": 5,
+    "expected_requests": 15,
+    "retriever_configuration": {
+        "k": 3,
+        "search_type": "mmr",
+        "fetch_k": 10,
+        "lambda_mult": 0.5
+    },
+    "latency_methodology": {
+        "unit": "milliseconds",
+        "measured_operation": "RAG invoke call, including retrieval and generation",
+        "application_initialization_included": false,
+        "percentiles_calculated_from": "Successful request latencies across all attempts",
+        "execution_mode": "sequential"
+    },
+    "metrics": {
+        "total_requests": 15,
+        "successful_requests": 15,
+        "failed_requests": 0,
+        "success_rate_percent": 100.0,
+        "error_rate_percent": 0.0,
+        "average_latency_ms": 2730.62,
+        "p50_latency_ms": 1986.95,
+        "p95_latency_ms": 5773.69,
+        "p99_latency_ms": 9614.73,
+        "total_duration_seconds": 40.98,
+        "throughput_requests_per_second": 0.366,
+        "api_cost": {
+            "status": "not_measured",
+            "reason": "Actual token usage or provider billing data has not been captured by this evaluator."
+        }
+    },
+    "case_results": [
+        {
+            "case_id": "ops_001",
+            "question": "What is the main topic of the document?",
+            "attempts_requested": 3,
+            "attempts_completed": 3,
+            "successful_attempts": 3,
+            "failed_attempts": 0,
+            "success_rate_percent": 100.0,
+            "average_latency_ms": 2541.52,
+            "p50_latency_ms": 2157.33,
+            "p95_latency_ms": 3560.12,
+            "p99_latency_ms": 3684.82,
+            "attempt_results": [
+                {
+                    "case_id": "ops_001",
+                    "repeat_number": 1,
+                    "question": "What is the main topic of the document?",
+                    "success": true,
+                    "latency_ms": 1751.24,
+                    "answer": "The document focuses on constituency parsing, outlining its specific challenges and the structural constraints involved. It presents models for the task and discusses examples in an appendix.",
+                    "answer_is_empty": false,
+                    "error": null
+                },
+                {
+                    "case_id": "ops_001",
+                    "repeat_number": 2,
+                    "question": "What is the main topic of the document?",
+                    "success": true,
+                    "latency_ms": 3715.99,
+                    "answer": "The document focuses on constituency parsing in natural language processing.",
+                    "answer_is_empty": false,
+                    "error": null
+                },
+                {
+                    "case_id": "ops_001",
+                    "repeat_number": 3,
+                    "question": "What is the main topic of the document?",
+                    "success": true,
+                    "latency_ms": 2157.33,
+                    "answer": "The document focuses on constituency parsing in natural language processing.",
+                    "answer_is_empty": false,
+                    "error": null
+                }
+            ]
+        },
+        {
+            "case_id": "ops_002",
+            "question": "Explain the attention mechanism in simple language.",
+            "attempts_requested": 3,
+            "attempts_completed": 3,
+            "successful_attempts": 3,
+            "failed_attempts": 0,
+            "success_rate_percent": 100.0,
+            "average_latency_ms": 1651.27,
+            "p50_latency_ms": 1436.7,
+            "p95_latency_ms": 2128.38,
+            "p99_latency_ms": 2189.86,
+            "attempt_results": [
+                {
+                    "case_id": "ops_002",
+                    "repeat_number": 1,
+                    "question": "Explain the attention mechanism in simple language.",
+                    "success": true,
+                    "latency_ms": 1436.7,
+                    "answer": "Attention lets a model look at different parts of a sequence and decide which parts matter most for a task. In self‑attention, each token can weigh every other token, producing a weighted sum that captures the sequence’s meaning. This mechanism has helped tasks like reading comprehension and abstractive summarization.",
+                    "answer_is_empty": false,
+                    "error": null
+                },
+                {
+                    "case_id": "ops_002",
+                    "repeat_number": 2,
+                    "question": "Explain the attention mechanism in simple language.",
+                    "success": true,
+                    "latency_ms": 1311.88,
+                    "answer": "Attention lets a model look at different parts of a sequence and decide which parts matter most for a task. In self‑attention, each token can weigh every other token, producing a weighted sum that captures the sequence’s meaning. This mechanism has helped tasks like reading comprehension and abstractive summarization.",
+                    "answer_is_empty": false,
+                    "error": null
+                },
+                {
+                    "case_id": "ops_002",
+                    "repeat_number": 3,
+                    "question": "Explain the attention mechanism in simple language.",
+                    "success": true,
+                    "latency_ms": 2205.23,
+                    "answer": "Attention lets a model look at different parts of a sequence and decide which parts matter most for a task. In self‑attention, each token can weigh every other token, producing a weighted sum that captures the sequence’s meaning. This mechanism has helped tasks like reading comprehension and abstractive summarization.",
+                    "answer_is_empty": false,
+                    "error": null
+                }
+            ]
+        },
+        {
+            "case_id": "ops_003",
+            "question": "How does the document describe abstractive summarization?",
+            "attempts_requested": 3,
+            "attempts_completed": 3,
+            "successful_attempts": 3,
+            "failed_attempts": 0,
+            "success_rate_percent": 100.0,
+            "average_latency_ms": 2164.15,
+            "p50_latency_ms": 1835.65,
+            "p95_latency_ms": 2890.07,
+            "p99_latency_ms": 2983.8,
+            "attempt_results": [
+                {
+                    "case_id": "ops_003",
+                    "repeat_number": 1,
+                    "question": "How does the document describe abstractive summarization?",
+                    "success": true,
+                    "latency_ms": 1835.65,
+                    "answer": "The document cites a deep‑reinforced model for abstractive summarization, implying that abstractive summarization is treated as a task where a deep neural network is trained with reinforcement learning to generate concise, novel summaries.",
+                    "answer_is_empty": false,
+                    "error": null
+                },
+                {
+                    "case_id": "ops_003",
+                    "repeat_number": 2,
+                    "question": "How does the document describe abstractive summarization?",
+                    "success": true,
+                    "latency_ms": 1649.57,
+                    "answer": "I don't know.",
+                    "answer_is_empty": false,
+                    "error": null
+                },
+                {
+                    "case_id": "ops_003",
+                    "repeat_number": 3,
+                    "question": "How does the document describe abstractive summarization?",
+                    "success": true,
+                    "latency_ms": 3007.23,
+                    "answer": "I don't know.",
+                    "answer_is_empty": false,
+                    "error": null
+                }
+            ]
+        },
+        {
+            "case_id": "ops_004",
+            "question": "Summarize the key ideas from the document.",
+            "attempts_requested": 3,
+            "attempts_completed": 3,
+            "successful_attempts": 3,
+            "failed_attempts": 0,
+            "success_rate_percent": 100.0,
+            "average_latency_ms": 1939.48,
+            "p50_latency_ms": 1935.39,
+            "p95_latency_ms": 2466.01,
+            "p99_latency_ms": 2513.18,
+            "attempt_results": [
+                {
+                    "case_id": "ops_004",
+                    "repeat_number": 1,
+                    "question": "Summarize the key ideas from the document.",
+                    "success": true,
+                    "latency_ms": 1358.09,
+                    "answer": "I don't know.",
+                    "answer_is_empty": false,
+                    "error": null
+                },
+                {
+                    "case_id": "ops_004",
+                    "repeat_number": 2,
+                    "question": "Summarize the key ideas from the document.",
+                    "success": true,
+                    "latency_ms": 2524.97,
+                    "answer": "I don't know.",
+                    "answer_is_empty": false,
+                    "error": null
+                },
+                {
+                    "case_id": "ops_004",
+                    "repeat_number": 3,
+                    "question": "Summarize the key ideas from the document.",
+                    "success": true,
+                    "latency_ms": 1935.39,
+                    "answer": "I don't know.",
+                    "answer_is_empty": false,
+                    "error": null
+                }
+            ]
+        },
+        {
+            "case_id": "ops_005",
+            "question": "Give one example that helps explain the main concept.",
+            "attempts_requested": 3,
+            "attempts_completed": 3,
+            "successful_attempts": 3,
+            "failed_attempts": 0,
+            "success_rate_percent": 100.0,
+            "average_latency_ms": 5356.69,
+            "p50_latency_ms": 3508.12,
+            "p95_latency_ms": 9868.3,
+            "p99_latency_ms": 10433.65,
+            "attempt_results": [
+                {
+                    "case_id": "ops_005",
+                    "repeat_number": 1,
+                    "question": "Give one example that helps explain the main concept.",
+                    "success": true,
+                    "latency_ms": 3508.12,
+                    "answer": "One example is the sinusoidal positional encoding: each position is represented by a vector whose components are sinusoids with wavelengths ranging from \\(2\\pi\\) to \\(10000\\cdot2\\pi\\). This lets the model learn to attend to different positions by comparing these encodings. The idea is that the model can easily learn to attend by using these geometric‑progression wavelengths.",
+                    "answer_is_empty": false,
+                    "error": null
+                },
+                {
+                    "case_id": "ops_005",
+                    "repeat_number": 2,
+                    "question": "Give one example that helps explain the main concept.",
+                    "success": true,
+                    "latency_ms": 1986.95,
+                    "answer": "One example is the sinusoidal positional encoding: each position is represented by a vector whose components are sinusoids with wavelengths ranging from \\(2\\pi\\) to \\(10000\\cdot2\\pi\\). This lets the model learn to attend to different positions by comparing these encodings, illustrating how attention can replace recurrence.",
+                    "answer_is_empty": false,
+                    "error": null
+                },
+                {
+                    "case_id": "ops_005",
+                    "repeat_number": 3,
+                    "question": "Give one example that helps explain the main concept.",
+                    "success": true,
+                    "latency_ms": 10574.99,
+                    "answer": "One example is the sinusoidal positional encoding: each position is represented by a vector whose components are sinusoids with wavelengths ranging from \\(2\\pi\\) to \\(10000\\cdot2\\pi\\). This design lets the model learn to attend to different positions by comparing these encodings. The idea is that the model can easily learn to attend to the right tokens using these fixed, position‑dependent signals.",
+                    "answer_is_empty": false,
+                    "error": null
+                }
+            ]
+        }
+    ],
+    "all_attempts": [
+        {
+            "case_id": "ops_001",
+            "repeat_number": 1,
+            "question": "What is the main topic of the document?",
+            "success": true,
+            "latency_ms": 1751.24,
+            "answer": "The document focuses on constituency parsing, outlining its specific challenges and the structural constraints involved. It presents models for the task and discusses examples in an appendix.",
+            "answer_is_empty": false,
+            "error": null
+        },
+        {
+            "case_id": "ops_001",
+            "repeat_number": 2,
+            "question": "What is the main topic of the document?",
+            "success": true,
+            "latency_ms": 3715.99,
+            "answer": "The document focuses on constituency parsing in natural language processing.",
+            "answer_is_empty": false,
+            "error": null
+        },
+        {
+            "case_id": "ops_001",
+            "repeat_number": 3,
+            "question": "What is the main topic of the document?",
+            "success": true,
+            "latency_ms": 2157.33,
+            "answer": "The document focuses on constituency parsing in natural language processing.",
+            "answer_is_empty": false,
+            "error": null
+        },
+        {
+            "case_id": "ops_002",
+            "repeat_number": 1,
+            "question": "Explain the attention mechanism in simple language.",
+            "success": true,
+            "latency_ms": 1436.7,
+            "answer": "Attention lets a model look at different parts of a sequence and decide which parts matter most for a task. In self‑attention, each token can weigh every other token, producing a weighted sum that captures the sequence’s meaning. This mechanism has helped tasks like reading comprehension and abstractive summarization.",
+            "answer_is_empty": false,
+            "error": null
+        },
+        {
+            "case_id": "ops_002",
+            "repeat_number": 2,
+            "question": "Explain the attention mechanism in simple language.",
+            "success": true,
+            "latency_ms": 1311.88,
+            "answer": "Attention lets a model look at different parts of a sequence and decide which parts matter most for a task. In self‑attention, each token can weigh every other token, producing a weighted sum that captures the sequence’s meaning. This mechanism has helped tasks like reading comprehension and abstractive summarization.",
+            "answer_is_empty": false,
+            "error": null
+        },
+        {
+            "case_id": "ops_002",
+            "repeat_number": 3,
+            "question": "Explain the attention mechanism in simple language.",
+            "success": true,
+            "latency_ms": 2205.23,
+            "answer": "Attention lets a model look at different parts of a sequence and decide which parts matter most for a task. In self‑attention, each token can weigh every other token, producing a weighted sum that captures the sequence’s meaning. This mechanism has helped tasks like reading comprehension and abstractive summarization.",
+            "answer_is_empty": false,
+            "error": null
+        },
+        {
+            "case_id": "ops_003",
+            "repeat_number": 1,
+            "question": "How does the document describe abstractive summarization?",
+            "success": true,
+            "latency_ms": 1835.65,
+            "answer": "The document cites a deep‑reinforced model for abstractive summarization, implying that abstractive summarization is treated as a task where a deep neural network is trained with reinforcement learning to generate concise, novel summaries.",
+            "answer_is_empty": false,
+            "error": null
+        },
+        {
+            "case_id": "ops_003",
+            "repeat_number": 2,
+            "question": "How does the document describe abstractive summarization?",
+            "success": true,
+            "latency_ms": 1649.57,
+            "answer": "I don't know.",
+            "answer_is_empty": false,
+            "error": null
+        },
+        {
+            "case_id": "ops_003",
+            "repeat_number": 3,
+            "question": "How does the document describe abstractive summarization?",
+            "success": true,
+            "latency_ms": 3007.23,
+            "answer": "I don't know.",
+            "answer_is_empty": false,
+            "error": null
+        },
+        {
+            "case_id": "ops_004",
+            "repeat_number": 1,
+            "question": "Summarize the key ideas from the document.",
+            "success": true,
+            "latency_ms": 1358.09,
+            "answer": "I don't know.",
+            "answer_is_empty": false,
+            "error": null
+        },
+        {
+            "case_id": "ops_004",
+            "repeat_number": 2,
+            "question": "Summarize the key ideas from the document.",
+            "success": true,
+            "latency_ms": 2524.97,
+            "answer": "I don't know.",
+            "answer_is_empty": false,
+            "error": null
+        },
+        {
+            "case_id": "ops_004",
+            "repeat_number": 3,
+            "question": "Summarize the key ideas from the document.",
+            "success": true,
+            "latency_ms": 1935.39,
+            "answer": "I don't know.",
+            "answer_is_empty": false,
+            "error": null
+        },
+        {
+            "case_id": "ops_005",
+            "repeat_number": 1,
+            "question": "Give one example that helps explain the main concept.",
+            "success": true,
+            "latency_ms": 3508.12,
+            "answer": "One example is the sinusoidal positional encoding: each position is represented by a vector whose components are sinusoids with wavelengths ranging from \\(2\\pi\\) to \\(10000\\cdot2\\pi\\). This lets the model learn to attend to different positions by comparing these encodings. The idea is that the model can easily learn to attend by using these geometric‑progression wavelengths.",
+            "answer_is_empty": false,
+            "error": null
+        },
+        {
+            "case_id": "ops_005",
+            "repeat_number": 2,
+            "question": "Give one example that helps explain the main concept.",
+            "success": true,
+            "latency_ms": 1986.95,
+            "answer": "One example is the sinusoidal positional encoding: each position is represented by a vector whose components are sinusoids with wavelengths ranging from \\(2\\pi\\) to \\(10000\\cdot2\\pi\\). This lets the model learn to attend to different positions by comparing these encodings, illustrating how attention can replace recurrence.",
+            "answer_is_empty": false,
+            "error": null
+        },
+        {
+            "case_id": "ops_005",
+            "repeat_number": 3,
+            "question": "Give one example that helps explain the main concept.",
+            "success": true,
+            "latency_ms": 10574.99,
+            "answer": "One example is the sinusoidal positional encoding: each position is represented by a vector whose components are sinusoids with wavelengths ranging from \\(2\\pi\\) to \\(10000\\cdot2\\pi\\). This design lets the model learn to attend to different positions by comparing these encodings. The idea is that the model can easily learn to attend to the right tokens using these fixed, position‑dependent signals.",
+            "answer_is_empty": false,
+            "error": null
+        }
+    ],
+    "limitations": [
+        "Only the configured number of test cases and repetitions were evaluated.",
+        "P95 and P99 estimates from a small sample are not reliable production-scale latency guarantees.",
+        "Sequential testing does not measure concurrent load or maximum system capacity.",
+        "Technical success does not establish answer correctness, completeness, or safety.",
+        "API cost is not measured because actual token usage or provider billing data is not captured."
+    ]
+}

@@ -335,10 +335,6 @@ Run the tests with:
 uv run pytest tests/unit/test_output_safety.py -v
 ```
 
-**Note:** This report documents the leakage evaluation logs provided for
-28 October 2026. It does not claim that the unit-test command above
-passed; record the actual test output separately after running it.
-
 ## 9. Final Assessment
 
 The application-level leakage evaluation identified a gap in handling

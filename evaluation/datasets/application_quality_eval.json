@@ -1,0 +1,34 @@
+
+[
+  {
+    "id": "app_quality_001",
+    "input": "What is the Transformer architecture?",
+    "expected_output": "The Transformer is a neural network architecture that uses attention mechanisms to process sequences and model relationships between tokens.",
+    "required_facts": [
+      "neural network architecture",
+      "attention mechanisms",
+      "relationships between tokens"
+    ]
+  },
+  {
+    "id": "app_quality_002",
+    "input": "What is self-attention in a Transformer?",
+    "expected_output": "Self-attention allows each token to consider other tokens in the input sequence when building its representation. It uses query, key, and value representations to calculate attention.",
+    "required_facts": [
+      "tokens consider other tokens",
+      "query representations",
+      "key representations",
+      "value representations"
+    ]
+  },
+  {
+    "id": "app_quality_003",
+    "input": "What is multi-head attention?",
+    "expected_output": "Multi-head attention runs multiple attention operations in parallel, allowing the model to capture different relationships or representation patterns from the input.",
+    "required_facts": [
+      "multiple attention operations",
+      "parallel processing",
+      "different relationships or representations"
+    ]
+  }
+]

@@ -15,6 +15,10 @@ from multi_doc_chat.prompts.prompt_library import PROMPT_REGISTRY
 from multi_doc_chat.model.models import PromptType, ChatAnswer
 from pydantic import ValidationError
 
+from multi_doc_chat.src.document_chat.output_safety import (
+    apply_output_safety,
+)
+
 
 class ConversationalRAG:
     """
@@ -130,6 +134,11 @@ class ConversationalRAG:
             chat_history = chat_history or []
             payload = {"input": user_input, "chat_history": chat_history}
             answer = self.chain.invoke(payload)
+
+            # Apply application-level output safety before returning the answer.
+            answer = apply_output_safety(
+                user_input=user_input,answer=str(answer)) 
+
             if not answer:
                 log.warning(
                     "No answer generated", user_input=user_input, session_id=self.session_id

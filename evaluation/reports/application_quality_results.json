@@ -1,0 +1,258 @@
+{
+    "evaluation_name": "Application Quality Evaluation",
+    "generated_at": "2026-10-28T13:09:30.636779+00:00",
+    "judge_model": "openai/gpt-oss-20b",
+    "rag_index_path": "F:\\AI Projects\\End-to-End-LLMOPs-Project\\faiss_index\\session_20261026_215230_88296173",
+    "threshold": 0.7,
+    "summary": {
+        "total_cases": 3,
+        "passed_cases": 3,
+        "failed_cases": 0,
+        "error_cases": 0,
+        "case_pass_rate": 1.0,
+        "metric_summary": {
+            "answer_relevancy": {
+                "average_score": 1.0,
+                "passed_count": 3,
+                "evaluated_count": 3,
+                "pass_rate": 1.0,
+                "error_count": 0,
+                "threshold": 0.7
+            },
+            "completeness": {
+                "average_score": 0.9,
+                "passed_count": 3,
+                "evaluated_count": 3,
+                "pass_rate": 1.0,
+                "error_count": 0,
+                "threshold": 0.7
+            },
+            "correctness": {
+                "average_score": 0.9333,
+                "passed_count": 3,
+                "evaluated_count": 3,
+                "pass_rate": 1.0,
+                "error_count": 0,
+                "threshold": 0.7
+            },
+            "faithfulness": {
+                "average_score": 1.0,
+                "passed_count": 3,
+                "evaluated_count": 3,
+                "pass_rate": 1.0,
+                "error_count": 0,
+                "threshold": 0.7
+            },
+            "hallucination": {
+                "average_score": 1.0,
+                "passed_count": 3,
+                "evaluated_count": 3,
+                "pass_rate": 1.0,
+                "error_count": 0,
+                "threshold": 0.7
+            },
+            "style": {
+                "average_score": 0.8,
+                "passed_count": 3,
+                "evaluated_count": 3,
+                "pass_rate": 1.0,
+                "error_count": 0,
+                "threshold": 0.7
+            }
+        }
+    },
+    "results": [
+        {
+            "case_id": "app_quality_001",
+            "input": "What is the Transformer architecture?",
+            "expected_output": "The Transformer is a neural network architecture that uses attention mechanisms to process sequences and model relationships between tokens.",
+            "actual_output": "The Transformer is a simple network architecture that relies solely on attention mechanisms, eliminating recurrence and convolutions. It consists of an encoder and a decoder stack, each built from a stack of N = 6 identical layers. Each of these layers contains two sub‑layers.",
+            "retrieval_context": [
+                "the effort to evaluate this idea. Ashish, with Illia, designed and implemented the ﬁrst Transformer models and",
+                "Figure 1: The Transformer - model architecture.\n3.1 Encoder and Decoder Stacks\nEncoder: The encoder is composed of a stack of N = 6 identical layers. Each layer has two",
+                "mechanism. We propose a new simple network architecture, the Transformer,\nbased solely on attention mechanisms, dispensing with recurrence and convolutions"
+            ],
+            "metrics": {
+                "correctness": {
+                    "score": 1.0,
+                    "threshold": 0.7,
+                    "passed": true,
+                    "reason": "The answer correctly identifies the Transformer as an attention‑based architecture, notes the absence of recurrence and convolutions, and describes its encoder/decoder structure with layers, matching the expected description and providing additional accurate details.",
+                    "error": null,
+                    "duration_seconds": 1.146
+                },
+                "completeness": {
+                    "score": 1.0,
+                    "threshold": 0.7,
+                    "passed": true,
+                    "reason": "The answer correctly identifies the Transformer as an attention‑based neural network, notes the absence of recurrence and convolutions, and describes its encoder/decoder structure with layers and sub‑layers—covering all key concepts from the expected answer and adding useful detail.",
+                    "error": null,
+                    "duration_seconds": 1.077
+                },
+                "style": {
+                    "score": 0.8,
+                    "threshold": 0.7,
+                    "passed": true,
+                    "reason": "The response is clear, grammatically correct, and professionally phrased. It follows a logical structure, introducing the architecture and then detailing its components. The answer is concise, covering the main points without unnecessary elaboration. However, it omits some depth (e.g., the role of multi‑head attention or positional encoding), which slightly limits completeness.",
+                    "error": null,
+                    "duration_seconds": 0.772
+                },
+                "answer_relevancy": {
+                    "score": 1.0,
+                    "threshold": 0.7,
+                    "passed": true,
+                    "reason": "The score is 1.00 because the answer fully addresses the question with no irrelevant content.",
+                    "error": null,
+                    "duration_seconds": 4.338
+                },
+                "faithfulness": {
+                    "score": 1.0,
+                    "threshold": 0.7,
+                    "passed": true,
+                    "reason": "The score is 1.00 because there are no contradictions, indicating perfect alignment between the actual output and the retrieval context!",
+                    "error": null,
+                    "duration_seconds": 4.821
+                },
+                "hallucination": {
+                    "score": 1.0,
+                    "threshold": 0.7,
+                    "passed": true,
+                    "reason": "All factual claims in the answer are directly supported by the retrieved context: the Transformer uses only attention mechanisms, omits recurrence and convolutions, has encoder and decoder stacks, each with N = 6 identical layers, and each layer contains two sub‑layers.",
+                    "error": null,
+                    "duration_seconds": 0.769
+                }
+            },
+            "status": "passed",
+            "execution_error": null,
+            "duration_seconds": 20.295
+        },
+        {
+            "case_id": "app_quality_002",
+            "input": "What is self-attention in a Transformer?",
+            "expected_output": "Self-attention allows each token to consider other tokens in the input sequence when building its representation. It uses query, key, and value representations to calculate attention.",
+            "actual_output": "Self‑attention is the mechanism that lets the Transformer compute representations of its input and output by attending to all positions in the sequence, without using recurrence or convolution. It is implemented as multi‑head attention, allowing each token to weigh every other token’s contribution. This approach makes the model entirely based on self‑attention.",
+            "retrieval_context": [
+                "3.2.3 Applications of Attention in our Model\nThe Transformer uses multi-head attention in three different ways:",
+                "To the best of our knowledge, however, the Transformer is the ﬁrst transduction model relying\nentirely on self-attention to compute representations of its input and output without using sequence-",
+                "As side beneﬁt, self-attention could yield more interpretable models. We inspect attention distributions"
+            ],
+            "metrics": {
+                "correctness": {
+                    "score": 0.8,
+                    "threshold": 0.7,
+                    "passed": true,
+                    "reason": "The answer correctly explains that self‑attention lets each token attend to all positions and describes multi‑head attention, matching the core idea of the expected answer. It does not mention the explicit query, key, and value components, which are a key detail in the expected response, so it is slightly incomplete but still largely accurate.",
+                    "error": null,
+                    "duration_seconds": 7.23
+                },
+                "completeness": {
+                    "score": 0.7,
+                    "threshold": 0.7,
+                    "passed": true,
+                    "reason": "The answer correctly explains that self‑attention lets each token attend to all positions and mentions multi‑head attention, covering the core idea that tokens consider others. However, it omits the explicit use of query, key, and value representations, which are essential to the expected explanation.",
+                    "error": null,
+                    "duration_seconds": 6.073
+                },
+                "style": {
+                    "score": 0.7,
+                    "threshold": 0.7,
+                    "passed": true,
+                    "reason": "The response is clear, grammatically correct, and professionally phrased. It follows a logical flow and remains concise, covering the core concept of self‑attention and multi‑head attention. However, it omits some detail about how queries, keys, and values interact, which slightly limits depth and completeness.",
+                    "error": null,
+                    "duration_seconds": 6.933
+                },
+                "answer_relevancy": {
+                    "score": 1.0,
+                    "threshold": 0.7,
+                    "passed": true,
+                    "reason": "The score is 1.00 because the answer fully addresses the question with no irrelevant content.",
+                    "error": null,
+                    "duration_seconds": 17.623
+                },
+                "faithfulness": {
+                    "score": 1.0,
+                    "threshold": 0.7,
+                    "passed": true,
+                    "reason": "The score is 1.00 because there are no contradictions, indicating perfect alignment between the actual output and the retrieval context!",
+                    "error": null,
+                    "duration_seconds": 25.852
+                },
+                "hallucination": {
+                    "score": 1.0,
+                    "threshold": 0.7,
+                    "passed": true,
+                    "reason": "All factual claims in the answer are supported by the retrieved context: the context confirms that the Transformer relies entirely on self‑attention to compute representations of input and output without recurrence, and that it uses multi‑head attention. No contradictions or unsupported statements are present.",
+                    "error": null,
+                    "duration_seconds": 4.241
+                }
+            },
+            "status": "passed",
+            "execution_error": null,
+            "duration_seconds": 72.58
+        },
+        {
+            "case_id": "app_quality_003",
+            "input": "What is multi-head attention?",
+            "expected_output": "Multi-head attention runs multiple attention operations in parallel, allowing the model to capture different relationships or representation patterns from the input.",
+            "actual_output": "Multi‑head attention lets a model attend to information from multiple representation subspaces at different positions simultaneously. It splits the attention into several heads, each learning a different pattern, and then concatenates the results. This contrasts with a single head, where averaging would blur those distinct patterns.",
+            "retrieval_context": [
+                "Multi-head attention allows the model to jointly attend to information from different representation\nsubspaces at different positions. With a single attention head, averaging inhibits this.",
+                "described in section 3.2.\nSelf-attention, sometimes called intra-attention is an attention mechanism relating different positions",
+                "Full attentions for head 5. Bottom: Isolated attentions from just the word ‘its’ for attention heads 5\nand 6. Note that the attentions are very sharp for this word.\n14"
+            ],
+            "metrics": {
+                "correctness": {
+                    "score": 1.0,
+                    "threshold": 0.7,
+                    "passed": true,
+                    "reason": "The answer accurately describes multi‑head attention as parallel attention operations over multiple subspaces, matching the expected explanation and containing no factual errors.",
+                    "error": null,
+                    "duration_seconds": 4.327
+                },
+                "completeness": {
+                    "score": 1.0,
+                    "threshold": 0.7,
+                    "passed": true,
+                    "reason": "The answer correctly states that multi‑head attention uses several heads to attend to different representation subspaces simultaneously, which matches the expected key concept of running multiple attention operations in parallel to capture diverse patterns. It also explains the splitting and concatenation process, providing a concise yet complete explanation without omitting essential details.",
+                    "error": null,
+                    "duration_seconds": 6.058
+                },
+                "style": {
+                    "score": 0.9,
+                    "threshold": 0.7,
+                    "passed": true,
+                    "reason": "The response is clear, concise, and well‑structured, with correct grammar and professional tone. It logically explains multi‑head attention and contrasts it with single‑head attention, making it easy to understand.",
+                    "error": null,
+                    "duration_seconds": 5.563
+                },
+                "answer_relevancy": {
+                    "score": 1.0,
+                    "threshold": 0.7,
+                    "passed": true,
+                    "reason": "The score is 1.00 because the answer fully addresses the question with no irrelevant content.",
+                    "error": null,
+                    "duration_seconds": 13.182
+                },
+                "faithfulness": {
+                    "score": 1.0,
+                    "threshold": 0.7,
+                    "passed": true,
+                    "reason": "The score is 1.00 because there are no contradictions, indicating perfect alignment between the actual output and the retrieval context!",
+                    "error": null,
+                    "duration_seconds": 29.113
+                },
+                "hallucination": {
+                    "score": 1.0,
+                    "threshold": 0.7,
+                    "passed": true,
+                    "reason": "All factual claims in the answer are supported by the retrieval context: the description of multi‑head attention attending to multiple subspaces and positions, the contrast with single‑head averaging, and the mention of multiple heads learning distinct patterns aligns with the context’s statements. No contradictions or unsupported claims are present.",
+                    "error": null,
+                    "duration_seconds": 6.157
+                }
+            },
+            "status": "passed",
+            "execution_error": null,
+            "duration_seconds": 69.706
+        }
+    ]
+}

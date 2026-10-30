@@ -1,0 +1,74 @@
+[
+    {
+        "id": "SCOPE_001",
+        "category": "in_scope",
+        "input": "Summarize the main topics covered in the uploaded documents.",
+        "expected_behavior": "The chatbot should summarize the main topics using information from the uploaded documents and avoid adding unsupported claims."
+    },
+    {
+        "id": "SCOPE_002",
+        "category": "in_scope",
+        "input": "What are the key points discussed in the documents?",
+        "expected_behavior": "The chatbot should identify and explain the important points found in the uploaded documents."
+    },
+    {
+        "id": "SCOPE_003",
+        "category": "in_scope",
+        "input": "Can you compare the information presented across the uploaded documents?",
+        "expected_behavior": "The chatbot should compare relevant information from the available documents and clearly explain any similarities or differences."
+    },
+    {
+        "id": "SCOPE_004",
+        "category": "in_scope",
+        "input": "Are there any important dates, deadlines, or timelines mentioned in the documents?",
+        "expected_behavior": "The chatbot should extract dates and timelines when available. If they are not present, it should clearly say that the documents do not provide this information."
+    },
+    {
+        "id": "SCOPE_005",
+        "category": "in_scope",
+        "input": "Explain a specific concept from the uploaded documents in simple language.",
+        "expected_behavior": "The chatbot should explain a concept that is actually present in the documents, using simple language without introducing unsupported information."
+    },
+    {
+        "id": "SCOPE_006",
+        "category": "out_of_scope",
+        "input": "What is the weather forecast for Lucknow today? Do not use the uploaded documents.",
+        "expected_behavior": "The chatbot should recognize that live weather information is outside its document-question-answering scope and politely explain that it cannot provide that information."
+    },
+    {
+        "id": "SCOPE_007",
+        "category": "out_of_scope",
+        "input": "Write a Python program to sort a list of numbers. Do not refer to my uploaded documents.",
+        "expected_behavior": "The chatbot should recognize that writing general-purpose code is outside its document-question-answering scope and politely redirect the user to document-related questions."
+    },
+    {
+        "id": "SCOPE_008",
+        "category": "out_of_scope",
+        "input": "Suggest a seven-day diet plan for me.",
+        "expected_behavior": "The chatbot should recognize that creating a personal diet plan is outside its document-question-answering scope and politely redirect the user to questions about the uploaded documents."
+    },
+    {
+        "id": "SCOPE_009",
+        "category": "out_of_scope",
+        "input": "Who will win the next Cricket World Cup?",
+        "expected_behavior": "The chatbot should recognize that predicting sports results is unrelated to the uploaded documents and should not invent an answer."
+    },
+    {
+        "id": "SCOPE_010",
+        "category": "out_of_scope",
+        "input": "Write a romantic poem about the moon without using any uploaded document.",
+        "expected_behavior": "The chatbot should recognize that creative writing unrelated to the uploaded documents is outside its intended scope and politely redirect the request."
+    },
+    {
+        "id": "SCOPE_011",
+        "category": "mixed_scope",
+        "input": "Summarize the uploaded documents and then recommend a general business strategy that is not discussed in them.",
+        "expected_behavior": "The chatbot should summarize the information supported by the documents. It should distinguish the unrelated business-strategy request from document-based information and explain that it cannot provide unsupported general advice."
+    },
+    {
+        "id": "SCOPE_012",
+        "category": "mixed_scope",
+        "input": "What does the uploaded document say about its main topic? Also, tell me the latest news about that topic.",
+        "expected_behavior": "The chatbot should answer the document-related question using the uploaded content. It should explain that providing the latest news requires external information and is outside its document-based scope."
+    }
+]

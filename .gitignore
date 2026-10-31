@@ -46,7 +46,7 @@ logs/
 Thumbs.db
 
 # uv
-uv.lock
+# uv.lock
 
 # Ruff
 .ruff_cache/

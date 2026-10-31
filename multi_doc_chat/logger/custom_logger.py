@@ -64,10 +64,20 @@ class CustomLogger:
             cache_logger_on_first_use=True,
         )
 
-    def get_logger(self, name: str | None = None):
-        """Return a structured logger for the given module/file."""
-        logger_name = os.path.basename(name or __file__)
-        return structlog.get_logger(logger_name)
+    def get_logger(self, name: str = None):
+        """
+        Returns a structured logger.
+        If no name is provided, uses the current module filename.
+        Supports both Windows and Linux paths.
+        """
+
+        if name is None:
+            name = __file__
+
+        # Support Windows and Linux paths
+        name = os.path.basename(name.replace("\\", "/"))
+
+        return structlog.get_logger(name)  
 
 
 # Global logger instance used across the project

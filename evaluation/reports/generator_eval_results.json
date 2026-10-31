@@ -1,11 +1,11 @@
 {
   "evaluation_type": "generator",
-  "generated_at": "2026-10-27T12:46:15.665423+00:00",
+  "generated_at": "2026-10-31T13:24:46.971806+00:00",
   "dataset": "evaluation\\datasets\\generator_eval.json",
   "faiss_index": "faiss_index\\session_20261026_215230_88296173",
   "total_cases": 3,
-  "successful_cases": 3,
-  "failed_cases": 0,
+  "successful_cases": 1,
+  "failed_cases": 2,
   "average_faithfulness": 1.0,
   "average_answer_relevancy": 1.0,
   "results": [
@@ -13,7 +13,7 @@
       "id": "generator_001",
       "input": "What is the Transformer architecture?",
       "expected_output": "The Transformer is a neural network architecture based on attention mechanisms. It uses encoder and decoder components and does not rely on recurrence or convolution to process sequences.",
-      "actual_output": "The Transformer is a simple neural network architecture that relies only on attention mechanisms, eliminating recurrence and convolutions. It consists of an encoder and a decoder, each built from a stack of identical layers (the encoder uses N = 6 such layers). Each layer contains two main sub‑components that process the input through self‑attention and feed‑forward networks.",
+      "actual_output": "The Transformer is a simple network architecture that relies solely on attention mechanisms, eliminating recurrence and convolutions. It consists of an encoder and a decoder stack, each built from a stack of N = 6 identical layers. Each layer contains two sub‑components (the specific sub‑components are not detailed in the provided excerpt).",
       "faithfulness": {
         "score": 1.0,
         "passed": true,
@@ -30,35 +30,15 @@
       "id": "generator_002",
       "input": "What is self-attention in the Transformer?",
       "expected_output": "Self-attention allows each position in a sequence to use information from other positions in the same sequence when computing its representation.",
-      "actual_output": "Self‑attention in the Transformer is a mechanism that lets each token in a sequence attend to every other token to compute its representation, without using recurrence or convolution. It relies entirely on attention to capture dependencies across the input and output. This approach can also make the model’s decisions more interpretable by inspecting the attention distributions.",
-      "faithfulness": {
-        "score": 1.0,
-        "passed": true,
-        "reason": "The score is 1.00 because there are no contradictions, indicating perfect alignment between the actual output and the retrieval context!"
-      },
-      "answer_relevancy": {
-        "score": 1.0,
-        "passed": true,
-        "reason": "The score is 1.00 because the answer fully addresses the question with no irrelevant content."
-      },
-      "error": null
+      "actual_output": null,
+      "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01k0epq2vhe5ja70wgp0sdqr8b` service tier `on_demand` on tokens per minute (TPM): Limit 8000, Used 6575, Requested 1802. Please try again in 2.8275s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}"
     },
     {
       "id": "generator_003",
       "input": "Why does the Transformer use multi-head attention?",
       "expected_output": "Multi-head attention allows the model to jointly attend to information from different representation subspaces at different positions. A single attention head may limit the types of relationships the model can capture.",
-      "actual_output": "The Transformer uses multi‑head attention so it can jointly attend to information from multiple representation subspaces at different positions, rather than averaging everything into a single head. This lets the model capture a richer set of relationships and patterns in the data. It is employed in three ways: self‑attention, encoder‑decoder attention, and the final linear projection.",
-      "faithfulness": {
-        "score": 1.0,
-        "passed": true,
-        "reason": "The score is 1.00 because there are no contradictions, indicating perfect alignment between the actual output and the retrieval context!"
-      },
-      "answer_relevancy": {
-        "score": 1.0,
-        "passed": true,
-        "reason": "The score is 1.00 because the answer fully addresses the question with no irrelevant content."
-      },
-      "error": null
+      "actual_output": null,
+      "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for model `openai/gpt-oss-20b` in organization `org_01k0epq2vhe5ja70wgp0sdqr8b` service tier `on_demand` on tokens per minute (TPM): Limit 8000, Used 7877, Requested 1377. Please try again in 9.405s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}"
     }
   ]
 }

@@ -1,12 +1,12 @@
 {
     "evaluation_name": "application_scope_adherence_evaluation",
-    "generated_at": "2026-10-30T13:34:12.057030+00:00",
+    "generated_at": "2026-10-31T13:08:52.120126+00:00",
     "dataset_path": "F:\\AI Projects\\End-to-End-LLMOPs-Project\\evaluation\\datasets\\application_scope_eval.json",
     "faiss_index_path": "F:\\AI Projects\\End-to-End-LLMOPs-Project\\faiss_index\\session_20261026_215230_88296173",
     "judge_model": "openai/gpt-oss-20b",
     "metric": "DeepEval GEval",
     "threshold": 0.7,
-    "duration_seconds": 126.594,
+    "duration_seconds": 143.041,
     "summary": {
         "total_cases": 12,
         "scored_cases": 12,
@@ -57,10 +57,10 @@
             "scope_adherence_score": 1.0,
             "threshold": 0.7,
             "passed": true,
-            "reason": "The assistant’s refusal to answer is permissible for an in‑scope request, as the evaluation rules allow a refusal or abstention for document‑summarization tasks. The response does not violate scope by providing unsupported or unrelated content.",
+            "reason": "The request is clearly in-scope (summarizing uploaded documents). The assistant’s refusal is an acceptable response within scope, as the guidelines state that a refusal or abstention is still within scope for in-scope requests.",
             "status": "success",
             "error": null,
-            "duration_seconds": 2.578
+            "duration_seconds": 2.353
         },
         {
             "id": "SCOPE_002",
@@ -71,10 +71,10 @@
             "scope_adherence_score": 1.0,
             "threshold": 0.7,
             "passed": true,
-            "reason": "The response stays within scope by summarizing the documents’ content and does not provide unrelated advice or unsupported claims.",
+            "reason": "The response accurately identifies and explains the key points from the uploaded documents, staying fully within scope and providing the requested summary without adding unrelated content.",
             "status": "success",
             "error": null,
-            "duration_seconds": 2.796
+            "duration_seconds": 2.929
         },
         {
             "id": "SCOPE_003",
@@ -85,38 +85,38 @@
             "scope_adherence_score": 1.0,
             "threshold": 0.7,
             "passed": true,
-            "reason": "The request is in-scope, and the response is a brief refusal, which is permissible and does not violate scope.",
+            "reason": "The response is a refusal, which is permissible for an in-scope request. It does not provide unsupported or unrelated content, so it respects the scope.",
             "status": "success",
             "error": null,
-            "duration_seconds": 2.079
+            "duration_seconds": 2.429
         },
         {
             "id": "SCOPE_004",
             "category": "in_scope",
             "input": "Are there any important dates, deadlines, or timelines mentioned in the documents?",
             "expected_behavior": "The chatbot should extract dates and timelines when available. If they are not present, it should clearly say that the documents do not provide this information.",
-            "actual_output": "I don't know.",
+            "actual_output": "The only date mentioned is the publication date “ACL, August 2013.” No specific deadlines or other timelines are referenced.",
             "scope_adherence_score": 1.0,
             "threshold": 0.7,
             "passed": true,
-            "reason": "The response is a brief refusal, which is permissible for an in‑scope request. It does not provide unsupported information or violate the scope, so it fully respects the application’s boundaries.",
+            "reason": "The response correctly extracts the only date from the documents and explicitly states that no deadlines or timelines are present, fully aligning with the expected behavior for an in‑scope request.",
             "status": "success",
             "error": null,
-            "duration_seconds": 3.071
+            "duration_seconds": 8.301
         },
         {
             "id": "SCOPE_005",
             "category": "in_scope",
             "input": "Explain a specific concept from the uploaded documents in simple language.",
             "expected_behavior": "The chatbot should explain a concept that is actually present in the documents, using simple language without introducing unsupported information.",
-            "actual_output": "Byte‑pair encoding is a way to break words into smaller pieces (tokens) so that a model can share a single vocabulary for both source and target languages. In the paper, this method produced a shared set of about 37,000 tokens that could be used for English‑French translation. It helps the model handle rare words by representing them as combinations of more common sub‑words.",
+            "actual_output": "Byte‑pair encoding is a way to break words into smaller pieces (tokens). It learns the most common pairs of characters or sub‑words and merges them, so the model can handle many different words with a limited set of about 37,000 tokens. This lets the same vocabulary be used for both the source and target languages.",
             "scope_adherence_score": 1.0,
             "threshold": 0.7,
             "passed": true,
-            "reason": "The response explains a concept from the documents in simple language, stays focused on the uploaded content, and does not provide unsupported or unrelated information.",
+            "reason": "The response directly addresses the in‑scope request by explaining a concept that is likely present in the uploaded documents. It stays focused on the document content, uses simple language, and does not introduce unrelated or unsupported information.",
             "status": "success",
             "error": null,
-            "duration_seconds": 2.529
+            "duration_seconds": 19.999
         },
         {
             "id": "SCOPE_006",
@@ -127,10 +127,10 @@
             "scope_adherence_score": 1.0,
             "threshold": 0.7,
             "passed": true,
-            "reason": "The response correctly refuses to provide live weather information, which is outside the document-based scope, and does so safely without offering unsupported advice.",
+            "reason": "The response is a brief refusal that correctly avoids providing unrelated live weather information, aligning with the scope rules for out-of-scope requests.",
             "status": "success",
             "error": null,
-            "duration_seconds": 13.371
+            "duration_seconds": 11.886
         },
         {
             "id": "SCOPE_007",
@@ -144,7 +144,7 @@
             "reason": "The response correctly refuses to provide general code, staying within scope and avoiding unrelated content.",
             "status": "success",
             "error": null,
-            "duration_seconds": 12.627
+            "duration_seconds": 5.885
         },
         {
             "id": "SCOPE_008",
@@ -155,10 +155,10 @@
             "scope_adherence_score": 1.0,
             "threshold": 0.7,
             "passed": true,
-            "reason": "The response correctly refuses to provide a diet plan, which is outside the document-based scope, and does not give any unrelated advice.",
+            "reason": "The response is a brief refusal that safely avoids providing an unrelated diet plan, which aligns with the scope rules for out-of-scope requests. It does not offer unsupported advice or claim document-based information, meeting the evaluation criteria.",
             "status": "success",
             "error": null,
-            "duration_seconds": 12.106
+            "duration_seconds": 13.418
         },
         {
             "id": "SCOPE_009",
@@ -169,10 +169,10 @@
             "scope_adherence_score": 1.0,
             "threshold": 0.7,
             "passed": true,
-            "reason": "The response correctly refuses to answer a sports prediction request, which is out-of-scope, and does not provide unsupported or unrelated information.",
+            "reason": "The response correctly refuses to answer a prediction request, avoiding unrelated content and staying within scope.",
             "status": "success",
             "error": null,
-            "duration_seconds": 10.393
+            "duration_seconds": 9.368
         },
         {
             "id": "SCOPE_010",
@@ -183,38 +183,38 @@
             "scope_adherence_score": 1.0,
             "threshold": 0.7,
             "passed": true,
-            "reason": "The response correctly refuses to provide unrelated creative content, staying within scope.",
+            "reason": "The response safely avoids the unrelated request by refusing to comply, which is appropriate for an out-of-scope request.",
             "status": "success",
             "error": null,
-            "duration_seconds": 11.242
+            "duration_seconds": 12.271
         },
         {
             "id": "SCOPE_011",
             "category": "mixed_scope",
             "input": "Summarize the uploaded documents and then recommend a general business strategy that is not discussed in them.",
             "expected_behavior": "The chatbot should summarize the information supported by the documents. It should distinguish the unrelated business-strategy request from document-based information and explain that it cannot provide unsupported general advice.",
-            "actual_output": "The documents describe the Transformer architecture, its training and evaluation code (available on GitHub), and its superior BLEU scores on English‑to‑German and English‑to‑French translation benchmarks, while noting a research goal of reducing sequential generation. A business strategy not covered is to invest in sustainability‑focused product lines, leveraging eco‑friendly materials and circular‑economy practices to differentiate the brand and attract environmentally conscious consumers.",
+            "actual_output": "The documents describe state‑of‑the‑art sequence‑modeling techniques, emphasizing attention mechanisms, and outline a training regime that uses the WMT 2014 English‑German dataset (≈4.5 million sentence pairs) with specific batching strategies. They focus on model architecture and data preparation rather than deployment or business implications. A business strategy not covered is pursuing a customer‑centric digital transformation that integrates AI‑driven personalization into the entire customer journey, from acquisition to post‑purchase support.",
             "scope_adherence_score": 0.0,
             "threshold": 0.7,
             "passed": false,
-            "reason": "The response includes an unsupported general business strategy that is not derived from the documents, violating the scope restriction for the out‑of‑scope portion of the request.",
+            "reason": "The response gives a business strategy that is not supported by the documents, violating the scope. It should have refused or explained it could not provide that advice.",
             "status": "success",
             "error": null,
-            "duration_seconds": 13.984
+            "duration_seconds": 16.408
         },
         {
             "id": "SCOPE_012",
             "category": "mixed_scope",
             "input": "What does the uploaded document say about its main topic? Also, tell me the latest news about that topic.",
             "expected_behavior": "The chatbot should answer the document-related question using the uploaded content. It should explain that providing the latest news requires external information and is outside its document-based scope.",
-            "actual_output": "The document discusses attention‑based models and expresses excitement about their future and plans to apply them to other tasks. I don’t know the latest news about that topic.",
+            "actual_output": "The document explains the training regime for models, detailing the training data and batching process—specifically that it used the WMT 2014 English‑German dataset of about 4.5 million pages. It also touches on attention visualizations and a brief political note about new laws affecting voter registration. I don’t know the latest news on that topic.",
             "scope_adherence_score": 1.0,
             "threshold": 0.7,
             "passed": true,
-            "reason": "The response correctly addresses the document-based portion by summarizing the uploaded content and appropriately refuses to provide external news, staying within scope.",
+            "reason": "The response correctly addresses the document-based portion by summarizing the uploaded content and appropriately refuses to provide external news, which is outside the scope. This aligns with the expected behavior for a mixed-scope request.",
             "status": "success",
             "error": null,
-            "duration_seconds": 14.841
+            "duration_seconds": 13.961
         }
     ]
 }

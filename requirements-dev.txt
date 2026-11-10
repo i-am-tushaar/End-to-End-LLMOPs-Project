@@ -1,0 +1,11 @@
+
+# Jupyter
+ipykernel==6.30.0
+
+# Testing
+pytest==8.4.2
+pytest-cov==7.0.0
+httpx==0.28.1
+
+# LLM Evaluation
+deepeval==4.3.1

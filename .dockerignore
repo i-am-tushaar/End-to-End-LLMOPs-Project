@@ -1,0 +1,48 @@
+
+# Virtual environments
+.venv/
+venv/
+rag_env/
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Git files
+.git/
+.gitignore
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# IDE files
+.vscode/
+.idea/
+
+# Testing and coverage files
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Jupyter temporary files
+.ipynb_checkpoints/
+
+# Log files
+*.log
+logs/
+
+# Temporary files
+temp/
+tmp/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# OS files
+.DS_Store
+Thumbs.db

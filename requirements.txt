@@ -13,7 +13,7 @@ langchain-openai==0.2.10
 langchain-huggingface==0.3.1
 langsmith==0.10.10
 
-# Document processing
+# Document Processing
 pypdf
 docx2txt==0.9
 
@@ -22,7 +22,7 @@ sentence-transformers
 transformers==5.17.0
 tokenizers==0.23.1
 
-# Vector database
+# Vector Database
 faiss-cpu
 
 # API
@@ -31,18 +31,6 @@ uvicorn==0.32.1
 python-multipart==0.0.20
 Jinja2==3.1.4
 
-# Other dependencies
-ipykernel==6.30.0
+# Other Dependencies
 openai
 pandas
-
-# Testing
-pytest==8.4.2
-pytest-cov==7.0.0
-httpx==0.28.1
-
-# Testing and LLM evaluation
-pytest==8.4.2
-pytest-cov==7.0.0
-httpx==0.28.1
-deepeval==4.3.1

@@ -1,0 +1,66 @@
+
+{
+  "family": "llmopstdlive",
+  "networkMode": "awsvpc",
+
+  "executionRoleArn": "arn:aws:iam::YOUR_ACCOUNT_ID:role/ecsTaskExecutionRole",
+
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+
+  "cpu": "1024",
+  "memory": "8192",
+
+  "runtimePlatform": {
+    "operatingSystemFamily": "LINUX",
+    "cpuArchitecture": "X86_64"
+  },
+
+  "containerDefinitions": [
+    {
+      "name": "llmops-live-container",
+
+      "image": "REPLACE_WITH_ECR_IMAGE",
+
+      "essential": true,
+
+      "cpu": 1024,
+
+      "portMappings": [
+        {
+          "containerPort": 8080,
+          "protocol": "tcp"
+        }
+      ],
+
+      "environment": [
+        {
+          "name": "ENV",
+          "value": "production"
+        }
+      ],
+
+      "secrets": [
+        {
+          "name": "GOOGLE_API_KEY",
+          "valueFrom": "YOUR_GOOGLE_API_SECRET_ARN"
+        },
+        {
+          "name": "GROQ_API_KEY",
+          "valueFrom": "YOUR_GROQ_API_SECRET_ARN"
+        }
+      ],
+
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/llmopstdlive",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs",
+          "awslogs-create-group": "true"
+        }
+      }
+    }
+  ]
+}

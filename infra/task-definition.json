@@ -3,18 +3,43 @@
   "family": "llmops-task",
   "networkMode": "awsvpc",
   "requiresCompatibilities": ["FARGATE"],
-  "cpu": "512",
-  "memory": "1024",
-  "executionRoleArn": "YOUR_ECS_TASK_EXECUTION_ROLE_ARN",
+  "cpu": "1024",
+  "memory": "4096",
+  "executionRoleArn": "arn:aws:iam::452975373208:role/llmops-infrastructure-ECSTaskExecutionRole-zNZChLJTeS9n",
   "containerDefinitions": [
     {
       "name": "llmops-container",
-      "image": "YOUR_ECR_IMAGE_URI",
+      "image": "452975373208.dkr.ecr.eu-north-1.amazonaws.com/llmopsrepolive:v2",
       "essential": true,
       "portMappings": [
         {
           "containerPort": 8080,
           "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {"name": "APP_NAME", "value": "End-to-End-LLMOps-Project"},
+        {"name": "APP_ENV", "value": "production"},
+        {"name": "DEBUG", "value": "False"},
+        {"name": "LLM_PROVIDER", "value": "groq"},
+        {"name": "GROQ_MODEL_NAME", "value": "openai/gpt-oss-20b"},
+        {"name": "EMBEDDING_PROVIDER", "value": "huggingface"},
+        {"name": "VECTOR_STORE", "value": "faiss"},
+        {"name": "FAISS_INDEX_PATH", "value": "faiss_index"},
+        {"name": "LANGCHAIN_TRACING_V2", "value": "true"},
+        {"name": "LANGCHAIN_PROJECT", "value": "End-to-End-LLMOps-Project"},
+        {"name": "LANGCHAIN_ENDPOINT", "value": "https://api.smith.langchain.com"},
+        {"name": "HOST", "value": "0.0.0.0"},
+        {"name": "PORT", "value": "8080"}
+      ],
+      "secrets": [
+        {
+          "name": "GROQ_API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:eu-north-1:452975373208:secret:llmops/GROQ_API_KEY-majbby"
+        },
+        {
+          "name": "LANGCHAIN_API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:eu-north-1:452975373208:secret:llmops/LANGCHAIN_API_KEY-KPnnBJ"
         }
       ],
       "logConfiguration": {

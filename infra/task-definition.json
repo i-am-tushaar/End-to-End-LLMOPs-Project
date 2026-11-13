@@ -1,0 +1,30 @@
+
+{
+  "family": "llmops-task",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "YOUR_ECS_TASK_EXECUTION_ROLE_ARN",
+  "containerDefinitions": [
+    {
+      "name": "llmops-container",
+      "image": "YOUR_ECR_IMAGE_URI",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 8080,
+          "protocol": "tcp"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/llmopstdlive",
+          "awslogs-region": "eu-north-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
+}

@@ -5,11 +5,31 @@
 > CloudFormation creates it, how to inspect it, what may incur charges,
 > and how to remove it safely.
 
+## Table of contents
+
+- [1. Where this document belongs](#1-where-this-document-belongs)
+- [2. Project deployment overview](#2-project-deployment-overview)
+- [3. What CloudFormation does](#3-what-cloudformation-does)
+- [4. Resources created by `cloudformation.yml`](#4-resources-created-by-cloudformationyml)
+- [5. What is not created by this template?](#5-what-is-not-created-by-this-template)
+- [6. Region and naming used in this project](#6-region-and-naming-used-in-this-project)
+- [7. Prerequisites before deployment](#7-prerequisites-before-deployment)
+- [8. Validate the CloudFormation template](#8-validate-the-cloudformation-template)
+- [9. Deploy the infrastructure](#9-deploy-the-infrastructure)
+- [10. Check the stack and resources](#10-check-the-stack-and-resources)
+- [11. Where to inspect resources in the AWS Console](#11-where-to-inspect-resources-in-the-aws-console)
+- [12. Which resources cost money?](#12-which-resources-cost-money)
+- [13. Delete the infrastructure when practice is finished](#13-delete-the-infrastructure-when-practice-is-finished)
+- [14. IAM permissions and safe practice](#14-iam-permissions-and-safe-practice)
+- [15. Recommended practice workflow](#15-recommended-practice-workflow)
+- [16. Quick command reference](#16-quick-command-reference)
+- [17. Final summary](#17-final-summary)
+
 ## 1. Where this document belongs
 
 Save this file in the project repository at:
 
-``` text
+```text
 End-to-End-LLMOPs-Project/
 ├── infra/
 │   ├── cloudformation.yml
@@ -26,7 +46,7 @@ End-to-End-LLMOPs-Project/
 This keeps the explanation next to the CloudFormation template it
 documents. Add a link to it from the main `README.md`, for example:
 
-``` markdown
+```markdown
 ## AWS Infrastructure
 
 See [AWS Infrastructure Guide](infra/AWS_INFRASTRUCTURE_GUIDE.md) for the
@@ -46,20 +66,20 @@ service, or start a Fargate task.
 
 The intended deployment flow is:
 
-1.  A developer pushes code to the configured GitHub repository.
-2.  GitHub Actions authenticates to AWS using GitHub's OpenID Connect
+1. A developer pushes code to the configured GitHub repository.
+2. GitHub Actions authenticates to AWS using GitHub's OpenID Connect
     (OIDC) identity provider.
-3.  GitHub Actions assumes an IAM deployment role.
-4.  The workflow builds the Docker image and pushes it to Amazon ECR.
-5.  An ECS task definition describes how to run the image.
-6.  An ECS service runs the task on AWS Fargate in the configured VPC
+3. GitHub Actions assumes an IAM deployment role.
+4. The workflow builds the Docker image and pushes it to Amazon ECR.
+5. An ECS task definition describes how to run the image.
+6. An ECS service runs the task on AWS Fargate in the configured VPC
     subnet.
-7.  The task writes logs to CloudWatch Logs.
-8.  Users access the application through the task's public IP and the
-    configured application port, once the ECS service/task has been
+7. The task writes logs to CloudWatch Logs.
+8. Users access the application through the task's public IP and the
+    configured application port, once the ECS service or task has been
     created and assigned a public IP.
 
-``` text
+```text
 GitHub repository
        |
        v
@@ -97,7 +117,7 @@ CloudFormation reads the template and creates the resources as one
 
 In this project, the stack name is:
 
-``` text
+```text
 llmops-infrastructure
 ```
 
@@ -108,31 +128,19 @@ inspect, update, and delete the infrastructure as a group.
 
 The template uses these parameters:
 
-  -----------------------------------------------------------------------------
-  Parameter               Default / example             Purpose
-  ----------------------- ----------------------------- -----------------------
-  `GitHubOwner`           `i-am-tushaar`                GitHub account or
-                                                        organization that owns
-                                                        the repository
-
-  `GitHubRepo`            `End-to-End-LLMOPs-Project`   Repository allowed by
-                                                        the GitHub OIDC role
-                                                        trust policy
-
-  `ECRRepositoryName`     `llmopsrepolive`              Name of the ECR image
-                                                        repository
-
-  `ECSClusterName`        `llmops-live-cluster`         Name of the ECS cluster
-
-  `AllowedCidr`           `0.0.0.0/0` in the template   IPv4 CIDR permitted to
-                                                        access TCP port 8080
-  -----------------------------------------------------------------------------
+| Parameter           | Default or example           | Purpose                                                        |
+| ------------------- | ---------------------------- | -------------------------------------------------------------- |
+| `GitHubOwner`       | `i-am-tushaar`               | GitHub account or organization that owns the repository        |
+| `GitHubRepo`        | `End-to-End-LLMOPs-Project`  | Repository allowed by the GitHub OIDC role trust policy        |
+| `ECRRepositoryName` | `llmopsrepolive`             | Name of the ECR image repository                               |
+| `ECSClusterName`    | `llmops-live-cluster`        | Name of the ECS cluster                                        |
+| `AllowedCidr`       | `0.0.0.0/0` in the template  | IPv4 CIDR permitted to access TCP port 8080                    |
 
 **Security:** Do not use `0.0.0.0/0` for an application that should only
 be reachable by you. For practice, pass your current public IPv4 address
 with `/32`, for example `203.0.113.10/32`. The example address is
-documentation-only; use your actual current public IP. A changing
-home/ISP IP may require updating the security-group rule.
+documentation only; use your actual current public IP. A changing
+home or ISP IP may require updating the security group rule.
 
 ## 4. Resources created by `cloudformation.yml`
 
@@ -140,9 +148,9 @@ The following describes the resources in the current project template.
 
 ### 4.1 VPC (Virtual Private Cloud)
 
-**CloudFormation resource type:** `AWS::EC2::VPC`\
-**Configured CIDR:** `10.0.0.0/16`\
-**Name tag:** `llmops-vpc`
+- **CloudFormation resource type:** `AWS::EC2::VPC`
+- **Configured CIDR:** `10.0.0.0/16`
+- **Name tag:** `llmops-vpc`
 
 **What it is:** A logically isolated network in AWS.
 
@@ -160,8 +168,8 @@ network services used with it may incur charges.
 
 ### 4.2 Public subnet
 
-**CloudFormation resource type:** `AWS::EC2::Subnet`\
-**Configured CIDR:** `10.0.1.0/24`
+- **CloudFormation resource type:** `AWS::EC2::Subnet`
+- **Configured CIDR:** `10.0.1.0/24`
 
 **What it is:** A smaller network range inside the VPC.
 
@@ -209,25 +217,25 @@ transfer and public IPv4 usage may incur charges.
 network traffic is sent.
 
 **Why they are needed:** The public subnet needs a default route to the
-Internet Gateway for internet-bound IPv4 traffic.
+Internet Gateway for internet bound IPv4 traffic.
 
 **How they are created:** CloudFormation creates a route table, adds a
 default route (`0.0.0.0/0`) targeting the Internet Gateway, and
 associates the route table with the public subnet.
 
 **Where to check:** AWS Console → VPC → Route Tables. Select the project
-route table and inspect: - **Routes:** a route for `0.0.0.0/0` with the
-Internet Gateway as target. - **Subnet associations:** the project
-public subnet.
+route table and inspect:
+
+- **Routes:** a route for `0.0.0.0/0` with the Internet Gateway as target.
+- **Subnet associations:** the project public subnet.
 
 **Cost:** Route tables and routes do not have a separate hourly charge.
 
 ### 4.5 Security Group
 
-**CloudFormation resource type:** `AWS::EC2::SecurityGroup`\
-**Application port:** TCP `8080`\
-**Default template source range:** `0.0.0.0/0`, overridden during the
-practice deployment with the user's IP `/32`.
+- **CloudFormation resource type:** `AWS::EC2::SecurityGroup`
+- **Application port:** TCP `8080`
+- **Default template source range:** `0.0.0.0/0`, overridden during the practice deployment with the user's IP `/32`.
 
 **What it is:** A virtual firewall attached to network interfaces.
 
@@ -251,18 +259,20 @@ intentional, reviewed requirement.
 
 ### 4.6 Amazon Elastic Container Registry (ECR) repository
 
-**CloudFormation resource type:** `AWS::ECR::Repository`\
-**Repository name:** `llmopsrepolive`
+- **CloudFormation resource type:** `AWS::ECR::Repository`
+- **Repository name:** `llmopsrepolive`
 
 **What it is:** A private registry for storing Docker/OCI container
 images.
 
 **Why it is needed:** The CI/CD workflow can push the built application
-image to ECR. ECS/Fargate can then pull that image to start a container.
+image to ECR. ECS or Fargate can then pull that image to start a container.
 
-**How it is created:** The template creates a private ECR repository
-with: - Image tag mutability set to `IMMUTABLE`. - Image scanning on
-push enabled. - AES-256 encryption.
+**How it is created:** The template creates a private ECR repository with:
+
+- Image tag mutability set to `IMMUTABLE`.
+- Image scanning on push enabled.
+- AES-256 encryption.
 
 **Where to check:** AWS Console → Elastic Container Registry (ECR) →
 Private registry → Repositories. Select `llmopsrepolive`.
@@ -270,18 +280,18 @@ Private registry → Repositories. Select `llmopsrepolive`.
 **Cost:** ECR storage is chargeable based on image data stored. Image
 scanning and data transfer may also have pricing implications depending
 on usage and current AWS pricing. An empty repository generally has no
-image-storage charge, but verify the current ECR pricing for the region.
+image storage charge, but verify the current ECR pricing for the region.
 
 **Deletion note:** A repository containing images may fail to delete
 unless the images are removed or the repository is configured for force
 deletion. The current template should be checked for its
-`EmptyOnDelete`/force-delete behaviour before relying on stack deletion
-to remove a non-empty repository.
+`EmptyOnDelete` or force delete behavior before relying on stack deletion
+to remove a not empty repository.
 
 ### 4.7 Amazon ECS cluster
 
-**CloudFormation resource type:** `AWS::ECS::Cluster`\
-**Cluster name:** `llmops-live-cluster`
+- **CloudFormation resource type:** `AWS::ECS::Cluster`
+- **Cluster name:** `llmops-live-cluster`
 
 **What it is:** A logical grouping and management boundary for ECS tasks
 and services.
@@ -306,9 +316,9 @@ template.
 
 ### 4.8 CloudWatch Logs log group
 
-**CloudFormation resource type:** `AWS::Logs::LogGroup`\
-**Log group:** `/ecs/llmopstdlive`\
-**Retention:** 14 days
+- **CloudFormation resource type:** `AWS::Logs::LogGroup`
+- **Log group:** `/ecs/llmopstdlive`
+- **Retention:** 14 days
 
 **What it is:** A named destination for application and container logs
 in Amazon CloudWatch Logs.
@@ -331,7 +341,7 @@ logs are retained, but it does not make logging free.
 
 **CloudFormation resource type:** `AWS::IAM::Role`
 
-**What it is:** An IAM role that the ECS/Fargate agent assumes for
+**What it is:** An IAM role that the ECS or Fargate agent assumes for
 actions needed to start a task.
 
 **Why it is needed:** The task execution role lets ECS perform startup
@@ -357,16 +367,16 @@ be required. Do not give the application broad permissions by default.
 
 ### 4.10 GitHub OIDC identity provider
 
-**CloudFormation resource type:** `AWS::IAM::OIDCProvider`\
-**Provider URL:** `https://token.actions.githubusercontent.com`\
-**Audience/client ID:** `sts.amazonaws.com`
+- **CloudFormation resource type:** `AWS::IAM::OIDCProvider`
+- **Provider URL:** `https://token.actions.githubusercontent.com`
+- **Audience/client ID:** `sts.amazonaws.com`
 
 **What it is:** An identity provider registration that allows AWS IAM to
 trust identity tokens issued by GitHub Actions.
 
 **Why it is needed:** It allows a GitHub Actions workflow to request
 temporary AWS credentials by assuming an IAM role. This avoids storing
-long-lived AWS access keys as GitHub repository secrets.
+long lived AWS access keys as GitHub repository secrets.
 
 **How it is created:** The template registers GitHub's OIDC issuer URL
 and the `sts.amazonaws.com` audience.
@@ -382,8 +392,8 @@ audience are allowed.
 
 ### 4.11 GitHub Actions deployment IAM role
 
-**CloudFormation resource type:** `AWS::IAM::Role`\
-**Role name in the template:** `GitHubActionsECSDeployRole`
+- **CloudFormation resource type:** `AWS::IAM::Role`
+- **Role name in the template:** `GitHubActionsECSDeployRole`
 
 **What it is:** An IAM role that a permitted GitHub Actions workflow can
 assume.
@@ -396,7 +406,7 @@ pushing an image, and interacting with ECS/CloudFormation.
 uses GitHub's OIDC provider. The subject condition is restricted to the
 configured repository and the `main` branch:
 
-``` text
+```text
 repo:i-am-tushaar/End-to-End-LLMOPs-Project:ref:refs/heads/main
 ```
 
@@ -419,41 +429,15 @@ is a specific, reviewed reason.
 The current `cloudformation.yml` creates the infrastructure listed
 above. It does not create these application deployment components:
 
-  -----------------------------------------------------------------------
-  Not created by this     What it does            When it is needed
-  template                                        
-  ----------------------- ----------------------- -----------------------
-  ECS task definition     Describes the container Before ECS can run the
-                          image, CPU, memory,     application
-                          port mappings,          
-                          environment, secrets,   
-                          roles and logging       
-
-  ECS service             Keeps the desired       To run the application
-                          number of tasks running as a service
-                          and manages deployments 
-
-  Fargate task            The actual running      When a task/service is
-                          container workload      started
-
-  Application public IP   Address assigned to a   When the task is
-                          running task's network  launched with public IP
-                          interface when public   
-                          IP assignment is        
-                          enabled                 
-
-  Application Load        Provides a managed      Optional; not used in
-  Balancer                entry point and routing the current public-IP
-                          to tasks                design
-
-  Secrets Manager secrets Stores actual           Must be created
-                          Gemini/Groq API key     separately unless
-                          values                  another process creates
-                                                  them
-
-  Docker image            Packaged application    Built locally or by CI
-                          artifact                and pushed to ECR
-  -----------------------------------------------------------------------
+| Not created by this template | What it does                                                                                | When it is needed                                           |
+| ---------------------------- | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| ECS task definition          | Describes the container image, CPU, memory, port mappings, environment, secrets, roles, and logging | Before ECS can run the application                  |
+| ECS service                  | Keeps the desired number of tasks running and manages deployments                           | To run the application as a service                         |
+| Fargate task                 | The actual running container workload                                                       | When a task or service is started                           |
+| Application public IP        | Address assigned to a running task's network interface when public IP assignment is enabled | When the task is launched with a public IP                  |
+| Application Load Balancer    | Provides a managed entry point and routing to tasks                                         | Optional, and not used in the current public IP design      |
+| Secrets Manager secrets      | Stores the actual Gemini and Groq API key values                                            | Must be created separately unless another process creates them |
+| Docker image                 | Packaged application artifact                                                               | Built locally or by CI and pushed to ECR                    |
 
 A cluster can exist while no application is running. Likewise, an ECR
 repository can exist while it contains no images.
@@ -462,71 +446,70 @@ repository can exist while it contains no images.
 
 The AWS region used for the practice deployment is:
 
-``` text
+```text
 Europe (Stockholm)
 eu-north-1
 ```
 
 The CloudFormation stack name is:
 
-``` text
+```text
 llmops-infrastructure
 ```
 
 Other key names:
 
-  Item                   Name
-  ---------------------- -----------------------
-  ECR repository         `llmopsrepolive`
-  ECS cluster            `llmops-live-cluster`
-  CloudWatch log group   `/ecs/llmopstdlive`
-  Application port       `8080`
-  VPC CIDR               `10.0.0.0/16`
-  Public subnet CIDR     `10.0.1.0/24`
-
+| Item                 | Name                  |
+| -------------------- | --------------------- |
+| ECR repository       | `llmopsrepolive`      |
+| ECS cluster          | `llmops-live-cluster` |
+| CloudWatch log group | `/ecs/llmopstdlive`   |
+| Application port     | `8080`                |
+| VPC CIDR             | `10.0.0.0/16`         |
+| Public subnet CIDR   | `10.0.1.0/24`         |
 Always select `eu-north-1` in the AWS Console when checking these
 resources. IAM is a global service, so IAM pages may display **Global**
 rather than a regional selector.
 
 ## 7. Prerequisites before deployment
 
-1.  AWS CLI v2 is installed.
-2.  AWS CLI is configured with credentials for the intended AWS account.
-3.  The IAM identity has the permissions required to create, inspect,
+1. AWS CLI v2 is installed.
+2. AWS CLI is configured with credentials for the intended AWS account.
+3. The IAM identity has the permissions required to create, inspect,
     update, and delete every resource in the template.
-4.  The current directory is the project root, where the `infra` folder
+4. The current directory is the project root, where the `infra` folder
     exists.
-5.  The CloudFormation template has been validated.
-6.  The `AllowedCidr` value is set to the intended trusted public IPv4
+5. The CloudFormation template has been validated.
+6. The `AllowedCidr` value is set to the intended trusted public IPv4
     CIDR.
 
 Check the CLI installation:
 
-``` cmd
+```bat
 aws --version
 ```
 
 Check which AWS identity is active:
 
-``` cmd
+```bat
 aws sts get-caller-identity --region eu-north-1
 ```
 
-The identity output contains account and user/role information. Do not
+The identity output contains account and user or role information. Do not
 publish credentials or secret access keys.
 
 ## 8. Validate the CloudFormation template
 
 Run from the project root:
 
-``` cmd
+```bat
 aws cloudformation validate-template --template-body file://infra/cloudformation.yml --region eu-north-1 --no-cli-pager
 ```
 
 **What it does:** Asks CloudFormation to parse and validate the template
 structure and returns the template parameters and capabilities.
 
-**Why:** It catches template-format and basic validation problems before
+**Why:** It catches template format and basic validation problems before
 a stack operation.
 
 **What it does not do:** It does not create resources and does not
@@ -538,14 +521,14 @@ also does not guarantee that every resource will succeed at runtime.
 For a practice deployment, replace the example CIDR below with your
 current public IPv4 address followed by `/32`.
 
-``` cmd
+```bat
 aws cloudformation deploy --template-file infra/cloudformation.yml --stack-name llmops-infrastructure --capabilities CAPABILITY_NAMED_IAM --parameter-overrides GitHubOwner=i-am-tushaar GitHubRepo=End-to-End-LLMOPs-Project AllowedCidr=YOUR_PUBLIC_IP/32 --region eu-north-1
 ```
 
 For example, if your current public IPv4 address were `203.0.113.10`,
 the parameter would be:
 
-``` text
+```text
 AllowedCidr=203.0.113.10/32
 ```
 
@@ -554,44 +537,25 @@ actually your public IP.
 
 ### Explanation of the deployment command
 
-  ---------------------------------------------------------------------------
-  Part                                    Meaning
-  --------------------------------------- -----------------------------------
-  `aws`                                   Runs the AWS CLI
-
-  `cloudformation`                        Selects the CloudFormation service
-
-  `deploy`                                Creates or updates a CloudFormation
-                                          stack
-
-  `--template-file`                       Points to the local YAML template
-
-  `infra/cloudformation.yml`              The infrastructure definition
-
-  `--stack-name`                          Names the stack
-
-  `llmops-infrastructure`                 The stack name used for this
-                                          project
-
-  `--capabilities CAPABILITY_NAMED_IAM`   Acknowledges that the template
-                                          creates named IAM resources
-
-  `--parameter-overrides`                 Supplies values for template
-                                          parameters
-
-  `GitHubOwner=...`                       Sets the GitHub owner
-
-  `GitHubRepo=...`                        Sets the GitHub repository
-
-  `AllowedCidr=...`                       Restricts inbound port 8080 to the
-                                          chosen IPv4 CIDR
-
-  `--region eu-north-1`                   Deploys in Europe (Stockholm)
-  ---------------------------------------------------------------------------
+| Part                                  | Meaning                                              |
+| ------------------------------------- | ---------------------------------------------------- |
+| `aws`                                 | Runs the AWS CLI                                     |
+| `cloudformation`                      | Selects the CloudFormation service                   |
+| `deploy`                              | Creates or updates a CloudFormation stack            |
+| `--template-file`                     | Points to the local YAML template                    |
+| `infra/cloudformation.yml`            | The infrastructure definition                        |
+| `--stack-name`                        | Names the stack                                      |
+| `llmops-infrastructure`               | The stack name used for this project                 |
+| `--capabilities CAPABILITY_NAMED_IAM` | Acknowledges that the template creates named IAM resources |
+| `--parameter-overrides`               | Supplies values for template parameters              |
+| `GitHubOwner=...`                     | Sets the GitHub owner                                |
+| `GitHubRepo=...`                      | Sets the GitHub repository                           |
+| `AllowedCidr=...`                     | Restricts inbound port 8080 to the chosen IPv4 CIDR  |
+| `--region eu-north-1`                 | Deploys in Europe (Stockholm)                        |
 
 A successful deployment usually ends with:
 
-``` text
+```text
 Successfully created/updated stack - llmops-infrastructure
 ```
 
@@ -603,7 +567,7 @@ your Billing dashboard.
 
 ### 10.1 Check stack status
 
-``` cmd
+```bat
 aws cloudformation describe-stacks --stack-name llmops-infrastructure --region eu-north-1 --no-cli-pager
 ```
 
@@ -611,13 +575,13 @@ This displays the stack status, parameters, and outputs.
 
 A successful stack creation normally shows:
 
-``` text
+```text
 CREATE_COMPLETE
 ```
 
 ### 10.2 Display only stack outputs
 
-``` cmd
+```bat
 aws cloudformation describe-stacks --stack-name llmops-infrastructure --query "Stacks[0].Outputs" --output table --region eu-north-1
 ```
 
@@ -627,7 +591,7 @@ are defined in the template.
 
 ### 10.3 List resources tracked by the stack
 
-``` cmd
+```bat
 aws cloudformation describe-stack-resources --stack-name llmops-infrastructure --region eu-north-1 --no-cli-pager
 ```
 
@@ -636,30 +600,33 @@ types, and statuses for resources tracked by CloudFormation.
 
 ### 10.4 Check recent stack events
 
-``` cmd
+```bat
 aws cloudformation describe-stack-events --stack-name llmops-infrastructure --region eu-north-1 --no-cli-pager
 ```
 
-This shows the stack operation history. When troubleshooting, inspect: -
-`ResourceStatus` - `ResourceType` - `LogicalResourceId` -
-`ResourceStatusReason`
+This shows the stack operation history. When troubleshooting, inspect:
+
+- `ResourceStatus`
+- `ResourceType`
+- `LogicalResourceId`
+- `ResourceStatusReason`
 
 A `CREATE_FAILED` event usually contains the reason a resource could not
 be created. Common causes include missing IAM permissions, an existing
-resource with the same globally/account-scoped name, a quota, or an
+resource with the same globally or account scoped name, a quota, or an
 invalid configuration.
 
 ### 10.5 Check selected services directly
 
-``` cmd
+```bat
 aws ecr describe-repositories --region eu-north-1
 ```
 
-``` cmd
+```bat
 aws ecs list-clusters --region eu-north-1
 ```
 
-``` cmd
+```bat
 aws logs describe-log-groups --log-group-name-prefix /ecs/llmopstdlive --region eu-north-1
 ```
 
@@ -668,41 +635,20 @@ aws logs describe-log-groups --log-group-name-prefix /ecs/llmopstdlive --region 
 First select **Europe (Stockholm), `eu-north-1`** in the region selector
 for regional services.
 
-  ---------------------------------------------------------------------------------------
-  Resource                AWS Console navigation  What to inspect
-  ----------------------- ----------------------- ---------------------------------------
-  CloudFormation stack    CloudFormation → Stacks Stack status, Resources, Outputs,
-                                                  Events, Template
-
-  VPC                     VPC → Your VPCs         VPC name and CIDR
-
-  Subnet                  VPC → Subnets           Subnet CIDR and VPC association
-
-  Internet Gateway        VPC → Internet Gateways Attachment to the project VPC
-
-  Route table             VPC → Route Tables      Default route and subnet association
-
-  Security Group          EC2 → Network &         Inbound TCP 8080 source and outbound
-                          Security → Security     rules
-                          Groups                  
-
-  ECR repository          ECR → Private registry  Repository name, images, image tags
-                          → Repositories          
-
-  ECS cluster             ECS → Clusters          Cluster name and resources/services
-
-  CloudWatch log group    CloudWatch → Logs → Log `/ecs/llmopstdlive` and retention
-                          groups                  
-
-  ECS execution role      IAM → Roles             Trust relationship and attached
-                                                  policies
-
-  GitHub OIDC provider    IAM → Identity          `token.actions.githubusercontent.com`
-                          providers               
-
-  GitHub Actions role     IAM → Roles             Trust relationship and deployment
-                                                  permissions
-  ---------------------------------------------------------------------------------------
+| Resource             | AWS Console navigation                         | What to inspect                                   |
+| -------------------- | ---------------------------------------------- | ------------------------------------------------- |
+| CloudFormation stack | CloudFormation → Stacks                        | Stack status, Resources, Outputs, Events, Template |
+| VPC                  | VPC → Your VPCs                                | VPC name and CIDR                                 |
+| Subnet               | VPC → Subnets                                  | Subnet CIDR and VPC association                   |
+| Internet Gateway     | VPC → Internet Gateways                        | Attachment to the project VPC                     |
+| Route table          | VPC → Route Tables                             | Default route and subnet association              |
+| Security Group       | EC2 → Network & Security → Security Groups     | Inbound TCP 8080 source and outbound rules        |
+| ECR repository       | ECR → Private registry → Repositories          | Repository name, images, image tags               |
+| ECS cluster          | ECS → Clusters                                 | Cluster name and resources or services            |
+| CloudWatch log group | CloudWatch → Logs → Log groups                 | `/ecs/llmopstdlive` and retention                 |
+| ECS execution role   | IAM → Roles                                    | Trust relationship and attached policies          |
+| GitHub OIDC provider | IAM → Identity providers                       | `token.actions.githubusercontent.com`             |
+| GitHub Actions role  | IAM → Roles                                    | Trust relationship and deployment permissions     |
 
 **Useful habit:** CloudFormation → Stack → Resources is the best first
 place to see which resources belong to this stack. The physical resource
@@ -714,61 +660,36 @@ AWS pricing changes and depends on region, configuration, usage, data
 volume, and public IPv4 allocation. The table below is a general cost
 guide, not a quote or guarantee of zero charges.
 
-  -----------------------------------------------------------------------
-  Resource                            Typical cost behaviour
-  ----------------------------------- -----------------------------------
-  VPC                                 No hourly VPC charge
-
-  Subnet                              No separate hourly subnet charge
-
-  Internet Gateway                    No hourly Internet Gateway charge;
-                                      data transfer and public IPv4 may
-                                      cost
-
-  Route table and routes              No separate hourly charge
-
-  Security Group                      No separate hourly charge
-
-  ECR repository                      Image storage is chargeable;
-                                      scanning and transfer may also have
-                                      pricing implications
-
-  ECS cluster                         No cluster-only hourly charge
-
-  CloudWatch Logs                     Ingestion and storage can be
-                                      chargeable
-
-  IAM roles and policies              No separate charge
-
-  IAM OIDC provider                   No separate charge
-
-  Fargate task                        Compute and allocated storage are
-                                      billed while provisioned/running
-                                      according to Fargate pricing
-
-  Public IPv4 address                 Public IPv4 usage can be charged
-                                      per hour
-
-  Application Load Balancer (if added Has hourly and
-  later)                              capacity/usage-related charges
-
-  Secrets Manager (if added later)    Secret storage and API usage can be
-                                      chargeable
-  -----------------------------------------------------------------------
+| Resource                             | Typical cost behavior                                                                  |
+| ------------------------------------ | -------------------------------------------------------------------------------------- |
+| VPC                                  | No hourly VPC charge                                                                   |
+| Subnet                               | No separate hourly subnet charge                                                       |
+| Internet Gateway                     | No hourly Internet Gateway charge. Data transfer and public IPv4 may cost              |
+| Route table and routes               | No separate hourly charge                                                              |
+| Security Group                       | No separate hourly charge                                                              |
+| ECR repository                       | Image storage is chargeable. Scanning and transfer may also have pricing implications  |
+| ECS cluster                          | No cluster only hourly charge                                                          |
+| CloudWatch Logs                      | Ingestion and storage can be chargeable                                                |
+| IAM roles and policies               | No separate charge                                                                     |
+| IAM OIDC provider                    | No separate charge                                                                     |
+| Fargate task                         | Compute and allocated storage are billed while provisioned or running, per Fargate pricing |
+| Public IPv4 address                  | Public IPv4 usage can be charged per hour                                              |
+| Application Load Balancer (if added later) | Has hourly and capacity or usage related charges                                 |
+| Secrets Manager (if added later)     | Secret storage and API usage can be chargeable                                         |
 
 ### Important cost points
 
--   The current template does not start a Fargate task. Therefore it
+- The current template does not start a Fargate task. Therefore it
     does not create Fargate compute charges by itself.
--   An empty ECR repository generally has no image-storage charge.
+- An empty ECR repository generally has no image storage charge.
     Images pushed into it consume storage.
--   CloudWatch log storage and ingestion can cost money if logs are
+- CloudWatch log storage and ingestion can cost money if logs are
     written.
--   A public subnet and Internet Gateway do not, by themselves, mean a
+- A public subnet and Internet Gateway do not, by themselves, mean a
     Fargate task or public IP is running.
--   If an ECS service/task is created later, compute, public IPv4,
+- If an ECS service or task is created later, compute, public IPv4,
     logging, and data transfer may incur charges.
--   AWS Free Tier eligibility and offers vary by account, service, date,
+- AWS Free Tier eligibility and offers vary by account, service, date,
     and region. Do not assume a resource is free without checking the
     current pricing page and Billing console.
 
@@ -783,7 +704,7 @@ the stack rather than manually deleting each resource.
 
 Run:
 
-``` cmd
+```bat
 aws cloudformation delete-stack --stack-name llmops-infrastructure --region eu-north-1
 ```
 
@@ -795,7 +716,7 @@ CloudFormation delete resources in dependency order.
 
 Check whether the stack still exists:
 
-``` cmd
+```bat
 aws cloudformation describe-stacks --stack-name llmops-infrastructure --region eu-north-1 --no-cli-pager
 ```
 
@@ -806,18 +727,20 @@ present.
 
 You can also inspect deletion progress:
 
-``` cmd
+```bat
 aws cloudformation describe-stack-events --stack-name llmops-infrastructure --region eu-north-1 --no-cli-pager
 ```
 
 ### Resources that may need separate cleanup
 
 CloudFormation deletes only resources it manages. Check separately for
-resources created outside the stack, such as: - Secrets Manager secrets
-created manually. - ECR images or repositories created manually. - ECS
-services, tasks, task definitions, or load balancers created outside
-this stack. - Public IPv4 addresses or other networking resources
-created separately. - Resources in other AWS regions.
+resources created outside the stack, such as:
+
+- Secrets Manager secrets created manually.
+- ECR images or repositories created manually.
+- ECS services, tasks, task definitions, or load balancers created outside this stack.
+- Public IPv4 addresses or other networking resources created separately.
+- Resources in other AWS regions.
 
 If an ECR repository contains images and stack deletion fails because it
 is not empty, remove the images or use the appropriate repository
@@ -835,13 +758,15 @@ error.
 
 ## 14. IAM permissions and safe practice
 
-The IAM identity running CloudFormation needs permission to: - Validate
-and inspect CloudFormation templates/stacks. - Create, tag, describe,
-modify, and delete the EC2/VPC resources in the template. - Create and
-delete ECR repositories. - Create and describe ECS clusters. - Create
-and delete CloudWatch log groups. - Create and manage IAM roles,
-policies, and OIDC identity providers. - Pass the appropriate ECS
-execution role where required.
+The IAM identity running CloudFormation needs permission to:
+
+- Validate and inspect CloudFormation templates and stacks.
+- Create, tag, describe, modify, and delete the EC2 and VPC resources in the template.
+- Create and delete ECR repositories.
+- Create and describe ECS clusters.
+- Create and delete CloudWatch log groups.
+- Create and manage IAM roles, policies, and OIDC identity providers.
+- Pass the appropriate ECS execution role where required.
 
 A deployment can fail even when the YAML is valid if the caller does not
 have the necessary IAM permissions.
@@ -855,12 +780,13 @@ broad permissions across the AWS account.
 **Do not leave AdministratorAccess attached as a permanent deployment
 solution.**
 
-After practice: 1. Delete the CloudFormation stack. 2. Verify that the
-stack and its resources are removed. 3. Remove the temporary
-`AdministratorAccess` policy from the IAM user. 4. Use a narrowly scoped
-IAM policy or deployment role for future work. 5. Prefer GitHub OIDC and
-temporary role credentials for CI/CD rather than storing long-lived AWS
-access keys in GitHub.
+After practice:
+
+1. Delete the CloudFormation stack.
+2. Verify that the stack and its resources are removed.
+3. Remove the temporary `AdministratorAccess` policy from the IAM user.
+4. Use a narrowly scoped IAM policy or deployment role for future work.
+5. Prefer GitHub OIDC and temporary role credentials for CI/CD rather than storing long lived AWS access keys in GitHub.
 
 Also rotate/deactivate any AWS access key that has been exposed or
 shared. Never commit `.env`, AWS secret access keys, Gemini API keys, or
@@ -870,18 +796,18 @@ Groq API keys to Git.
 
 Use this sequence whenever you practise the AWS deployment:
 
-1.  Open the project in the terminal at the repository root.
-2.  Check the active AWS identity with `aws sts get-caller-identity`.
-3.  Confirm the region is `eu-north-1`.
-4.  Check the current public IP and set `AllowedCidr` to that IP with
+1. Open the project in the terminal at the repository root.
+2. Check the active AWS identity with `aws sts get-caller-identity`.
+3. Confirm the region is `eu-north-1`.
+4. Check the current public IP and set `AllowedCidr` to that IP with
     `/32`.
-5.  Validate `infra/cloudformation.yml`.
-6.  Deploy the CloudFormation stack.
-7.  Inspect CloudFormation → Stack → Resources and verify the resources
+5. Validate `infra/cloudformation.yml`.
+6. Deploy the CloudFormation stack.
+7. Inspect CloudFormation → Stack → Resources and verify the resources
     in their AWS service consoles.
-8.  Continue with ECR image push and ECS task/service deployment only
+8. Continue with ECR image push and ECS task or service deployment only
     when ready.
-9.  When finished, delete the CloudFormation stack.
+9. When finished, delete the CloudFormation stack.
 10. Check for separately created resources, leftover images, logs,
     secrets, tasks, and public IP addresses.
 11. Remove temporary broad IAM permissions.
@@ -891,7 +817,7 @@ Use this sequence whenever you practise the AWS deployment:
 
 Run these commands from the project root in Windows CMD.
 
-``` cmd
+```bat
 :: Check AWS CLI version
 aws --version
 
@@ -925,25 +851,25 @@ aws cloudformation describe-stacks --stack-name llmops-infrastructure --region e
 
 ## 17. Final summary
 
--   `infra/cloudformation.yml` is the Infrastructure as Code template.
--   CloudFormation creates and tracks the supporting AWS infrastructure
+- `infra/cloudformation.yml` is the Infrastructure as Code template.
+- CloudFormation creates and tracks the supporting AWS infrastructure
     as one stack.
--   VPC, subnet, Internet Gateway, routes, and Security Group provide
+- VPC, subnet, Internet Gateway, routes, and Security Group provide
     networking.
--   ECR stores the Docker image.
--   ECS provides the cluster in which tasks and services are managed.
--   CloudWatch Logs stores container logs when the task definition is
+- ECR stores the Docker image.
+- ECS provides the cluster in which tasks and services are managed.
+- CloudWatch Logs stores container logs when the task definition is
     configured to send them.
--   IAM roles and GitHub OIDC enable ECS execution and GitHub Actions
+- IAM roles and GitHub OIDC enable ECS execution and GitHub Actions
     authentication.
--   The current template does not run the application; task definition,
+- The current template does not run the application; task definition,
     ECS service, and Fargate task are separate steps.
--   Some resources are free of direct hourly charges, while ECR storage,
+- Some resources are free of direct hourly charges, while ECR storage,
     CloudWatch usage, Fargate, public IPv4, and data transfer can incur
     costs.
--   Delete the CloudFormation stack when practice is finished, then
+- Delete the CloudFormation stack when practice is finished, then
     verify that separately created resources are also removed.
--   Remove temporary AdministratorAccess permissions and protect all
+- Remove temporary AdministratorAccess permissions and protect all
     credentials and API keys.
 
 **Always verify current AWS pricing and the actual resources in your

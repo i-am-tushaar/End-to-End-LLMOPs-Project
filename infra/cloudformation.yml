@@ -1,0 +1,322 @@
+
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: >
+  Infrastructure for End-to-End LLMOps Project
+  using AWS ECR, ECS Fargate and GitHub Actions.
+
+# ==========================================
+# 1. PARAMETERS
+# ==========================================
+
+Parameters:
+
+  GitHubOwner:
+    Type: String
+    Default: i-am-tushaar
+
+  GitHubRepo:
+    Type: String
+    Default: End-to-End-LLMOPs-Project
+
+  ECRRepositoryName:
+    Type: String
+    Default: llmopsrepolive
+
+  ECSClusterName:
+    Type: String
+    Default: llmops-live-cluster
+
+  AllowedCidr:
+    Type: String
+    Default: 0.0.0.0/0
+    Description: IP addresses allowed to access application port 8080
+
+# ==========================================
+# 2. RESOURCES
+# ==========================================
+
+Resources:
+
+  # ----------------------------------------
+  # A. VPC
+  # Creates isolated AWS network
+  # ----------------------------------------
+
+  LLMOpsVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: llmops-vpc
+
+  # ----------------------------------------
+  # B. Internet Gateway
+  # Allows internet connectivity
+  # ----------------------------------------
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+
+  AttachInternetGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref LLMOpsVPC
+      InternetGatewayId: !Ref InternetGateway
+
+  # ----------------------------------------
+  # C. Public Subnet
+  # Hosts the Fargate task
+  # ----------------------------------------
+
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref LLMOpsVPC
+      CidrBlock: 10.0.1.0/24
+      AvailabilityZone: !Select
+        - 0
+        - !GetAZs ''
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: llmops-public-subnet
+
+  # ----------------------------------------
+  # D. Route Table
+  # Routes internet traffic
+  # ----------------------------------------
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref LLMOpsVPC
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachInternetGateway
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnetAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRouteTable
+
+  # ----------------------------------------
+  # E. Security Group
+  # Allows traffic to FastAPI port 8080
+  # ----------------------------------------
+
+  LLMOpsSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow FastAPI application traffic
+      VpcId: !Ref LLMOpsVPC
+
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          CidrIp: !Ref AllowedCidr
+
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+
+      Tags:
+        - Key: Name
+          Value: llmops-security-group
+
+  # ----------------------------------------
+  # F. ECR Repository
+  # Stores Docker images
+  # ----------------------------------------
+
+  LLMOpsECRRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Ref ECRRepositoryName
+      ImageTagMutability: IMMUTABLE
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      EncryptionConfiguration:
+        EncryptionType: AES256
+
+  # ----------------------------------------
+  # G. ECS Cluster
+  # Manages Fargate containers
+  # ----------------------------------------
+
+  LLMOpsECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Ref ECSClusterName
+
+  # ----------------------------------------
+  # H. CloudWatch Log Group
+  # Stores application logs
+  # ----------------------------------------
+
+  LLMOpsLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /ecs/llmopstdlive
+      RetentionInDays: 14
+
+  # ----------------------------------------
+  # I. ECS Task Execution Role
+  # Allows ECS to pull images and retrieve secrets
+  # ----------------------------------------
+
+  ECSTaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ecs-tasks.amazonaws.com
+            Action:
+              - sts:AssumeRole
+
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+
+      Policies:
+        - PolicyName: ReadLLMOpsSecrets
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:llmops/*'
+
+  # ----------------------------------------
+  # J. GitHub OIDC Identity Provider
+  # Enables secure GitHub-to-AWS authentication
+  # ----------------------------------------
+
+  GitHubOIDCProvider:
+    Type: AWS::IAM::OIDCProvider
+    Properties:
+      Url: https://token.actions.githubusercontent.com
+      ClientIdList:
+        - sts.amazonaws.com
+
+  # ----------------------------------------
+  # K. GitHub Actions Deployment Role
+  # Allows GitHub Actions to deploy to AWS
+  # ----------------------------------------
+
+  GitHubActionsDeployRole:
+    Type: AWS::IAM::Role
+    Properties:
+
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !Ref GitHubOIDCProvider
+            Action:
+              - sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+                token.actions.githubusercontent.com:sub: !Sub 'repo:${GitHubOwner}/${GitHubRepo}:ref:refs/heads/main'
+
+      Policies:
+        - PolicyName: GitHubECSDeploymentPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+
+              # ECR authentication
+              - Effect: Allow
+                Action:
+                  - ecr:GetAuthorizationToken
+                Resource: '*'
+
+              # Push Docker images to ECR
+              - Effect: Allow
+                Action:
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:InitiateLayerUpload
+                  - ecr:UploadLayerPart
+                  - ecr:CompleteLayerUpload
+                  - ecr:PutImage
+                Resource: !GetAtt LLMOpsECRRepository.Arn
+
+              # ECS deployment permissions
+              - Effect: Allow
+                Action:
+                  - ecs:RegisterTaskDefinition
+                  - ecs:DescribeTaskDefinition
+                  - ecs:DescribeServices
+                  - ecs:DescribeClusters
+                  - ecs:CreateService
+                  - ecs:UpdateService
+                Resource: '*'
+
+              # Read CloudFormation outputs
+              - Effect: Allow
+                Action:
+                  - cloudformation:DescribeStacks
+                Resource: '*'
+
+              # Find API secret ARNs
+              - Effect: Allow
+                Action:
+                  - secretsmanager:DescribeSecret
+                Resource: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:llmops/*'
+
+              # Allow ECS to use execution role
+              - Effect: Allow
+                Action:
+                  - iam:PassRole
+                Resource: !GetAtt ECSTaskExecutionRole.Arn
+
+# ==========================================
+# 3. OUTPUTS
+# ==========================================
+
+Outputs:
+
+  ECRRepositoryUri:
+    Description: Docker image repository URI
+    Value: !GetAtt LLMOpsECRRepository.RepositoryUri
+
+  ECSClusterName:
+    Description: ECS cluster name
+    Value: !Ref LLMOpsECSCluster
+
+  PublicSubnetId:
+    Description: Public subnet for Fargate
+    Value: !Ref PublicSubnet
+
+  SecurityGroupId:
+    Description: Security group for FastAPI
+    Value: !Ref LLMOpsSecurityGroup
+
+  TaskExecutionRoleArn:
+    Description: ECS task execution role ARN
+    Value: !GetAtt ECSTaskExecutionRole.Arn
+
+  GitHubActionsRoleArn:
+    Description: GitHub deployment role ARN
+    Value: !GetAtt GitHubActionsDeployRole.Arn
+
+  LogGroupName:
+    Description: CloudWatch log group
+    Value: !Ref LLMOpsLogGroup

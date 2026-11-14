@@ -1,426 +1,238 @@
-# Deploying the End-to-End LLMOps RAG Application to AWS
+# Deploying the LLMOps RAG Application to AWS
 
-This guide documents the deployment of the FastAPI RAG application using
-**Docker, Amazon ECR, Amazon ECS on AWS Fargate, AWS CloudFormation, AWS
-Secrets Manager, IAM, VPC networking, and CloudWatch Logs**.
+This guide shows how to deploy the FastAPI RAG application to AWS using **Docker, Amazon ECR, Amazon ECS on AWS Fargate, CloudFormation, Secrets Manager, IAM, VPC networking, and CloudWatch Logs**.
 
-> **Deployment model:** ECS Fargate, not EC2. AWS manages the underlying
-> compute hosts. The application runs in a Docker container.
+> **Deployment model:** ECS Fargate, not EC2. AWS manages the servers, and you provide a Docker container.
 >
-> **Deployment values documented here:** Region `eu-north-1`, account
-> `452975373208`, ECR repository `llmopsrepolive`, ECS cluster
-> `llmops-live-cluster`, ECS service `llmops-service`, task family
-> `llmops-task`, container port `8080`.
+> **Values used in this guide:** region `eu-north-1`, ECR repository `llmopsrepolive`, ECS cluster `llmops-live-cluster`, ECS service `llmops-service`, task family `llmops-task`, container port `8080`. Replace `YOUR_ACCOUNT_ID` with your 12 digit AWS account ID.
+
+## Table of contents
+
+- [1. Architecture overview](#1-architecture-overview)
+- [2. Project files](#2-project-files)
+- [3. Application configuration](#3-application-configuration)
+- [4. Build and test Docker locally](#4-build-and-test-docker-locally)
+- [5. AWS prerequisites](#5-aws-prerequisites)
+- [6. Step 1: Create the infrastructure](#6-step-1-create-the-infrastructure)
+- [7. Step 2: Store the API keys in Secrets Manager](#7-step-2-store-the-api-keys-in-secrets-manager)
+- [8. Step 3: Build and push the image to ECR](#8-step-3-build-and-push-the-image-to-ecr)
+- [9. Step 4: Register the ECS task definition](#9-step-4-register-the-ecs-task-definition)
+- [10. Step 5: Update the ECS service](#10-step-5-update-the-ecs-service)
+- [11. Step 6: Find the public IP](#11-step-6-find-the-public-ip)
+- [12. Step 7: Open and test the application](#12-step-7-open-and-test-the-application)
+- [13. Step 8: Check the logs](#13-step-8-check-the-logs)
+- [14. Troubleshooting](#14-troubleshooting)
+- [15. Release checklist](#15-release-checklist)
+- [16. Security and production notes](#16-security-and-production-notes)
+- [17. Useful AWS Console links](#17-useful-aws-console-links)
+
 
 ## 1. Architecture overview
 
 Deployment flow:
 
-1.  Build the application Docker image locally.
-2.  Push the image to Amazon ECR.
-3.  Register an ECS task definition that specifies the image, CPU,
-    memory, port, environment variables, secrets, execution role, and
-    logging.
-4.  ECS launches the task on AWS Fargate in a public subnet.
-5.  The task receives a public IP address.
-6.  A security group permits inbound TCP traffic on port `8080` from the
-    configured client IP range.
-7.  Users access the FastAPI app at `http://PUBLIC_IP:8080` and Swagger
-    UI at `http://PUBLIC_IP:8080/docs`.
+1. Build the application Docker image.
+2. Push the image to Amazon ECR.
+3. Register an ECS task definition that says which image to run, with what CPU, memory, port, variables, and secrets.
+4. ECS starts the task on Fargate in a public subnet, and the task gets a public IP.
+5. A security group allows inbound TCP traffic on port `8080` from your IP.
+6. You open the API at `http://PUBLIC_IP:8080` and Swagger UI at `http://PUBLIC_IP:8080/docs`.
 
-  -----------------------------------------------------------------------
-  AWS service                         Role
-  ----------------------------------- -----------------------------------
-  CloudFormation                      Creates infrastructure from
-                                      `infra/cloudformation.yml`
+| AWS service                          | Role                                              |
+| ------------------------------------ | ------------------------------------------------- |
+| CloudFormation                       | Creates the infrastructure from `infra/cloudformation.yml` |
+| ECR                                  | Stores Docker images                              |
+| ECS                                  | Schedules and manages the container               |
+| Fargate                              | Runs the container without EC2 servers to manage  |
+| IAM                                  | Controls deployment and task permissions          |
+| Secrets Manager                      | Stores API keys                                   |
+| VPC, subnet, internet gateway, route table | Provide networking                          |
+| Security Group                       | Controls inbound access to port `8080`            |
+| CloudWatch Logs                      | Stores container logs                             |
 
-  ECR                                 Stores Docker images
+## 2. Project files
 
-  ECS                                 Schedules and manages the container
+| File                         | Purpose                                                  |
+| ---------------------------- | -------------------------------------------------------- |
+| `Dockerfile`                 | How to build the application image                       |
+| `.dockerignore`              | Files left out of the Docker build                       |
+| `.env`                       | Local settings and keys. **Never commit it**             |
+| `.env.example`               | Variable names with placeholder values. Safe to commit   |
+| `requirements.txt`           | Python dependencies                                      |
+| `infra/cloudformation.yml`   | AWS infrastructure as code                               |
+| `infra/task-definition.json` | ECS container and task settings                          |
 
-  Fargate                             Runs the container without managing
-                                      EC2 instances
+The YAML and JSON files in the repository are the source of truth. This guide explains the workflow.
 
-  IAM                                 Controls deployment and task
-                                      permissions
+## 3. Application configuration
 
-  Secrets Manager                     Stores API keys
+| Part         | Setting                                                                 |
+| ------------ | ----------------------------------------------------------------------- |
+| LLM          | Groq, `openai/gpt-oss-20b`                                              |
+| Embeddings   | Hugging Face, `sentence-transformers/all-MiniLM-L6-v2` (no API key needed) |
+| Vector store | FAISS                                                                   |
+| Retriever    | MMR with `top_k: 10`, `fetch_k: 20`, `lambda_mult: 0.5`                 |
+| API          | FastAPI on port `8080`                                                  |
 
-  VPC, subnet, internet gateway,      Provides networking
-  route table                         
+The Google model integrations were removed from `model_loader.py` and `config.yaml`. Keep `.env.example`, `config.yaml`, and the code consistent whenever you change a model.
 
-  Security Group                      Controls inbound access to port
-                                      8080
+**Secret rules**
 
-  CloudWatch Logs                     Stores container logs
-  -----------------------------------------------------------------------
-
-**Fargate vs EC2:** With EC2, you manage virtual machines. With Fargate,
-you provide the container image and task configuration, while AWS
-manages the underlying compute. This project uses Fargate. EC2-related
-resources in the template are networking resources, not an EC2
-application server.
-
-## 2. Deployment files
-
-``` text
-End-to-End-LLMOPs-Project/
-├── Dockerfile
-├── .dockerignore
-├── .env
-├── .env.example
-├── requirements.txt
-├── infra/
-│   ├── cloudformation.yml
-│   └── task-definition.json
-└── multi_doc_chat/
-    └── ...
-```
-
-  -----------------------------------------------------------------------
-  File                                Purpose
-  ----------------------------------- -----------------------------------
-  `Dockerfile`                        Defines how to build the
-                                      application image
-
-  `.dockerignore`                     Excludes unnecessary files from the
-                                      Docker build context
-
-  `.env`                              Local configuration and secrets; do
-                                      not commit
-
-  `.env.example`                      Documents variable names with
-                                      placeholder values
-
-  `requirements.txt`                  Python dependencies
-
-  `infra/cloudformation.yml`          AWS infrastructure as code
-
-  `infra/task-definition.json`        ECS container/task runtime
-                                      configuration
-  -----------------------------------------------------------------------
-
-The repository's actual YAML and JSON files are the source of truth for
-exact resource declarations. This guide documents the deployed
-configuration and workflow.
-
-## 3. Application model configuration
-
-The deployed application uses:
-
--   LLM: Groq, `openai/gpt-oss-20b`
--   Embeddings: Hugging Face, `sentence-transformers/all-MiniLM-L6-v2`
--   Vector store: FAISS
--   Retriever: MMR, `top_k: 10`, `fetch_k: 20`, `lambda_mult: 0.5`
--   API: FastAPI on port `8080`
-
-Google model integrations were removed from the active `model_loader.py`
-and `config.yaml`. The active model loader uses Groq for the LLM and
-Hugging Face for embeddings.
-
-### Example `.env.example`
-
-``` dotenv
-APP_NAME=End-to-End-LLMOps-Project
-APP_ENV=development
-DEBUG=True
-
-LLM_PROVIDER=groq
-GROQ_API_KEY=your_groq_api_key
-GROQ_MODEL_NAME=openai/gpt-oss-20b
-
-EMBEDDING_PROVIDER=huggingface
-HUGGINGFACE_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
-
-VECTOR_STORE=faiss
-FAISS_INDEX_PATH=faiss_index
-
-LANGCHAIN_TRACING_V2=true
-LANGCHAIN_API_KEY=your_langsmith_api_key
-LANGCHAIN_PROJECT=End-to-End-LLMOps-Project
-LANGCHAIN_ENDPOINT=https://api.smith.langchain.com
-
-GROQ_JUDGE_MODEL=openai/gpt-oss-120b
-
-HOST=0.0.0.0
-PORT=8080
-```
-
-The current `model_loader.py` reads the Hugging Face model name from
-`config.yaml`. Keep `.env.example`, `config.yaml`, and application code
-consistent if you change models.
-
-### Secret-handling rules
-
--   Real keys belong in local `.env` for local development only.
--   Never commit `.env`.
--   Commit `.env.example` with placeholders only.
--   Never put API key values in the Dockerfile, task-definition JSON,
-    source code, or GitHub.
--   In AWS, store the Groq and LangSmith keys in Secrets Manager and
-    reference them from the ECS task definition.
--   The public Hugging Face model used here does not require an API key.
+- Real keys belong only in your local `.env`, which is never committed.
+- Commit `.env.example` with placeholders only.
+- Never put key values in the Dockerfile, the task definition, the source code, or GitHub.
+- In AWS, keep the Groq and LangSmith keys in Secrets Manager and reference them from the task definition.
 
 ## 4. Build and test Docker locally
 
-The Dockerfile uses Python 3.11 slim, installs dependencies, copies the
-application into `/app`, and starts Uvicorn on `0.0.0.0:8080`.
+The Dockerfile uses Python 3.11 slim, installs the dependencies, copies the app into `/app`, and starts Uvicorn on port `8080`:
 
-Container command:
-
-``` dockerfile
+```dockerfile
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
 ```
 
-Build:
+Build and run the image (Command Prompt):
 
-``` cmd
+```bat
 docker build -t llmopsrepolive:latest .
-```
-
-Run locally:
-
-``` cmd
 docker run -d -p 8080:8080 --name llmops-test llmopsrepolive:latest
 ```
 
-Open `http://localhost:8080/docs`. If Swagger UI loads, the container is
-serving FastAPI locally.
+Open `http://localhost:8080/docs`. If Swagger UI loads, the container is serving FastAPI. Then clean up:
 
-Stop and remove the test container:
-
-``` cmd
+```bat
 docker stop llmops-test
 docker rm llmops-test
 ```
 
-## 5. AWS prerequisites and CLI identity
+## 5. AWS prerequisites
 
-Install Docker Desktop and AWS CLI, configure an AWS identity, and
-confirm the identity:
+Install Docker Desktop and the AWS CLI, then confirm which AWS identity you are using:
 
-``` cmd
+```bat
 aws sts get-caller-identity
 aws configure get region
 ```
 
-Values used in this deployment:
+| Setting           | Value                                     |
+| ----------------- | ----------------------------------------- |
+| AWS account       | `YOUR_ACCOUNT_ID`                         |
+| Region            | `eu-north-1`                              |
+| IAM CLI user      | `llmops-user`                             |
+| GitHub repository | `i-am-tushaar/End-to-End-LLMOPs-Project`  |
 
-  Setting             Value
-  ------------------- ------------------------------------------
-  AWS account         `452975373208`
-  Region              `eu-north-1`
-  IAM CLI user        `llmops-user`
-  GitHub repository   `i-am-tushaar/End-to-End-LLMOPs-Project`
+The deployment identity needs permission for CloudFormation, ECR login and push, ECS task definition and service updates, EC2 network interface descriptions, Secrets Manager descriptions, and a narrowly scoped `iam:PassRole` for the ECS task execution role.
 
-For another account, substitute its account ID and actual resource
-outputs. Never copy credentials from this guide.
+**Use least privilege.** Do not fix an access denied error by attaching `AdministratorAccess` permanently. Find the denied action and grant only that permission on the narrowest resource.
 
-The deployment identity needs appropriate permissions for
-CloudFormation, ECR authentication and push, ECS task definition
-registration and service updates, relevant EC2 network-interface
-descriptions, Secrets Manager descriptions, and narrowly scoped
-`iam:PassRole` for the ECS task execution role. Use least privilege. Do
-not solve access-denied errors by permanently attaching
-`AdministratorAccess`; identify the denied action and grant only the
-necessary permission on the narrowest resource.
+## 6. Step 1: Create the infrastructure
 
-## 6. Step 1: Create infrastructure using CloudFormation
+The CloudFormation template `infra/cloudformation.yml` creates:
 
-### `infra/cloudformation.yml`
+- A VPC (`10.0.0.0/16`), a public subnet (`10.0.1.0/24`), an internet gateway, and a public route
+- A security group that allows inbound TCP `8080` from `AllowedCidr`
+- The ECR repository `llmopsrepolive`
+- The ECS cluster `llmops-live-cluster`
+- The CloudWatch log group `/ecs/llmopstdlive`
+- The ECS task execution role, which can pull ECR images, write logs, and read secrets under `llmops/*`
+- The GitHub OIDC provider and the GitHub Actions deployment role
 
-The template used in this deployment creates/configures:
+**Set the allowed IP.** Find your public IP and add `/32`, which means one single address:
 
--   VPC `10.0.0.0/16`
--   Public subnet `10.0.1.0/24`
--   Internet gateway and public route
--   Security group allowing inbound TCP `8080` from `AllowedCidr`
--   ECR repository `llmopsrepolive`
--   ECS cluster `llmops-live-cluster`
--   CloudWatch log group `/ecs/llmopstdlive`
--   ECS task execution IAM role
--   GitHub OIDC provider and GitHub Actions deployment role
-
-The ECS task execution role is configured to pull ECR images, publish
-CloudWatch logs, and retrieve the configured Secrets Manager secrets.
-The deployment's secret access scope was configured for `llmops/*` in
-the account and region.
-
-### Set the allowed client IP
-
-Find the current public IP:
-
-``` cmd
+```bat
 curl https://checkip.amazonaws.com
 ```
 
-Use the returned IP with `/32`, for example `YOUR_PUBLIC_IP/32`. A `/32`
-allows one IPv4 address. The example is not a literal IP; use the actual
-output. If the client IP changes, update the security group
-rule/CloudFormation parameter.
+If your IP changes later, update the `AllowedCidr` parameter.
 
-### Deploy the stack
+**Deploy the stack** from the project root. Replace `YOUR_PUBLIC_IP/32` with your real address:
 
-Run from the project root (replace `YOUR_PUBLIC_IP/32`):
-
-``` cmd
+```bat
 aws cloudformation deploy --template-file infra/cloudformation.yml --stack-name llmops-infrastructure --capabilities CAPABILITY_NAMED_IAM --parameter-overrides GitHubOwner=i-am-tushaar GitHubRepo=End-to-End-LLMOPs-Project AllowedCidr=YOUR_PUBLIC_IP/32 --region eu-north-1
 ```
 
-What the arguments mean:
+| Argument                              | Meaning                                              |
+| ------------------------------------- | ---------------------------------------------------- |
+| `--template-file`                     | The CloudFormation template                          |
+| `--stack-name`                        | The name of the stack                                |
+| `--capabilities CAPABILITY_NAMED_IAM` | Confirms the template creates named IAM resources    |
+| `GitHubOwner`, `GitHubRepo`           | The repository the OIDC deployment role trusts       |
+| `AllowedCidr`                         | The IP range allowed to reach port `8080`            |
 
--   `--template-file`: CloudFormation YAML template.
--   `--stack-name`: stack name.
--   `--capabilities CAPABILITY_NAMED_IAM`: acknowledges creation of
-    named IAM resources.
--   `GitHubOwner` and `GitHubRepo`: GitHub repository used by the OIDC
-    deployment role.
--   `AllowedCidr`: source IP range permitted to reach port 8080.
--   `--region`: AWS region.
+**Read the outputs:**
 
-Inspect outputs:
-
-``` cmd
+```bat
 aws cloudformation describe-stacks --stack-name llmops-infrastructure --region eu-north-1 --query "Stacks[0].Outputs" --output table
 ```
 
-Outputs from the deployment documented here:
+The outputs list the ECS cluster, ECR URI, log group, public subnet, security group, task execution role, and GitHub Actions role. Subnet and security group IDs and role name endings are generated, so always copy them from your own outputs.
 
-  ----------------------------------------------------------------------------------------------------
-  Output                              Value
-  ----------------------------------- ----------------------------------------------------------------
-  ECS cluster                         `llmops-live-cluster`
-
-  ECR URI                             `452975373208.dkr.ecr.eu-north-1.amazonaws.com/llmopsrepolive`
-
-  Log group                           `/ecs/llmopstdlive`
-
-  Public subnet                       `subnet-08e5b96cc9a34f936`
-
-  Security group                      `sg-0958e37ea3a4e8d49`
-
-  ECS task execution role             `llmops-infrastructure-ECSTaskExecutionRole-zNZChLJTeS9n`
-
-  GitHub Actions role                 `llmops-infrastructure-GitHubActionsDeployRole-2BZ6az8I1m4i`
-  ----------------------------------------------------------------------------------------------------
-
-Generated resource IDs and role suffixes can differ in another account
-or after stack recreation. Use actual stack outputs.
-
-## 7. Step 2: Store API keys in Secrets Manager
+## 7. Step 2: Store the API keys in Secrets Manager
 
 Create these secrets in `eu-north-1`:
 
-  Secret name                  Secret value
-  ---------------------------- ----------------------
-  `llmops/GROQ_API_KEY`        Current Groq API key
-  `llmops/LANGCHAIN_API_KEY`   LangSmith API key
+| Secret name                | Secret value        |
+| -------------------------- | ------------------- |
+| `llmops/GROQ_API_KEY`      | Your Groq API key   |
+| `llmops/LANGCHAIN_API_KEY` | Your LangSmith key  |
 
-The current task definition uses plaintext secret values, so the Groq
-secret value should be the key itself, not a JSON object. Do not put
-actual key values in this guide or source control.
+Store each key as plain text, not as a JSON object, because the task definition maps each secret to one variable. The names must start with `llmops/`, because the execution role can only read that path.
 
-### Secret rotation
+**Rotating a key.** ECS reads a secret only when a task starts, so a running container keeps the old value. After you update a secret, force a new deployment:
 
-ECS injects a secret when a task starts. Updating a Secrets Manager
-value does not change the environment of an already-running container.
-After rotating a key, force a new deployment:
-
-``` cmd
+```bat
 aws ecs update-service --cluster llmops-live-cluster --service llmops-service --force-new-deployment --region eu-north-1 --no-cli-pager
 ```
 
-Then wait for stability and retrieve the replacement task's public IP.
-
 ## 8. Step 3: Build and push the image to ECR
 
-Authenticate Docker:
+Set a few variables for this Command Prompt session. They keep the commands short:
 
-``` cmd
-aws ecr get-login-password --region eu-north-1 | docker login --username AWS --password-stdin 452975373208.dkr.ecr.eu-north-1.amazonaws.com
+```bat
+set ACCOUNT_ID=YOUR_ACCOUNT_ID
+set ECR_URI=%ACCOUNT_ID%.dkr.ecr.eu-north-1.amazonaws.com/llmopsrepolive
+set TAG=v2
 ```
 
-Build a versioned image (the corrected model-loader image in this
-deployment was tagged `v2`):
+Log in to ECR, then build, tag, and push:
 
-``` cmd
-docker build -t llmopsrepolive:v2 .
+```bat
+aws ecr get-login-password --region eu-north-1 | docker login --username AWS --password-stdin %ACCOUNT_ID%.dkr.ecr.eu-north-1.amazonaws.com
+docker build -t llmopsrepolive:%TAG% .
+docker tag llmopsrepolive:%TAG% %ECR_URI%:%TAG%
+docker push %ECR_URI%:%TAG%
 ```
 
-Tag it for ECR:
+Check the images in the repository:
 
-``` cmd
-docker tag llmopsrepolive:v2 452975373208.dkr.ecr.eu-north-1.amazonaws.com/llmopsrepolive:v2
-```
-
-Push it:
-
-``` cmd
-docker push 452975373208.dkr.ecr.eu-north-1.amazonaws.com/llmopsrepolive:v2
-```
-
-The documented push completed with digest:
-
-``` text
-sha256:dc66c5153cc601b44d458736910a85a1252e4de8b564b3315bacf3a83082bc51
-```
-
-A future build will have a different digest. Verify repository images:
-
-``` cmd
+```bat
 aws ecr describe-images --repository-name llmopsrepolive --region eu-north-1 --query "imageDetails[*].[imageTags,imageDigest]" --output table
 ```
 
-A temporary Docker `TLS handshake timeout` occurred during one push.
-Retrying the same push succeeded and Docker reused layers already
-uploaded. A TLS timeout alone is not evidence of an IAM permission
-problem.
+The repository uses immutable tags, so use a new unique tag for every release and never reuse one, including `latest`.
 
-## 9. Step 4: Configure and register the ECS task definition
+## 9. Step 4: Register the ECS task definition
 
-### `infra/task-definition.json`
+`infra/task-definition.json` is the recipe ECS follows to run your container. It does not create the VPC or the ECR repository.
 
-The task definition is the runtime blueprint for the ECS task. It does
-not create the VPC or ECR repository.
+| Setting               | Value                                              |
+| --------------------- | -------------------------------------------------- |
+| Family                | `llmops-task`                                      |
+| Compatibility         | `FARGATE`                                          |
+| Network mode          | `awsvpc`                                           |
+| CPU                   | `1024` (1 vCPU)                                    |
+| Memory                | `4096` MiB (4 GB)                                  |
+| Container             | `llmops-container`                                 |
+| Container and host port | `8080`                                           |
+| Image                 | The ECR image with a version tag                   |
+| Log group             | `/ecs/llmopstdlive`, stream prefix `ecs`           |
+| Execution role        | The task execution role created by CloudFormation  |
 
-Deployed settings:
+**Environment variables** mirror `.env.example` with production values, for example `APP_ENV=production`, `DEBUG=False`, `LLM_PROVIDER=groq`, `EMBEDDING_PROVIDER=huggingface`, `VECTOR_STORE=faiss`, `HOST=0.0.0.0`, and `PORT=8080`.
 
-  Setting               Value
-  --------------------- ------------------------------------------------
-  Family                `llmops-task`
-  Compatibility         `FARGATE`
-  Network mode          `awsvpc`
-  CPU                   `1024` (1 vCPU)
-  Memory                `4096` MiB (4 GB)
-  Container             `llmops-container`
-  Container/host port   `8080`
-  Image                 ECR image with a version tag
-  Log group             `/ecs/llmopstdlive`
-  Log stream prefix     `ecs`
-  Execution role        CloudFormation-created ECS task execution role
+**Secrets** map Secrets Manager ARNs to variable names inside the container. Use the full ARNs from your account and never put key values in this file:
 
-Environment variables included production configuration such as:
-
-``` text
-APP_NAME=End-to-End-LLMOps-Project
-APP_ENV=production
-DEBUG=False
-LLM_PROVIDER=groq
-GROQ_MODEL_NAME=openai/gpt-oss-20b
-EMBEDDING_PROVIDER=huggingface
-VECTOR_STORE=faiss
-FAISS_INDEX_PATH=faiss_index
-LANGCHAIN_TRACING_V2=true
-LANGCHAIN_PROJECT=End-to-End-LLMOps-Project
-LANGCHAIN_ENDPOINT=https://api.smith.langchain.com
-HOST=0.0.0.0
-PORT=8080
-```
-
-The `secrets` array maps Secrets Manager ARNs to environment variable
-names inside the container. Conceptually:
-
-``` json
+```json
 "secrets": [
   {
     "name": "GROQ_API_KEY",
@@ -433,366 +245,183 @@ names inside the container. Conceptually:
 ]
 ```
 
-Use the full secret ARNs from your account. Do not put secret values in
-this JSON.
+**For each release,** set the `image` field to the new tag:
 
-Before registering a release, update the `image` field to the new
-version tag, for example:
-
-``` json
-"image": "452975373208.dkr.ecr.eu-north-1.amazonaws.com/llmopsrepolive:v2"
+```json
+"image": "YOUR_ACCOUNT_ID.dkr.ecr.eu-north-1.amazonaws.com/llmopsrepolive:v2"
 ```
 
-Validate JSON:
+Validate the JSON and register a new revision:
 
-``` cmd
+```bat
 python -m json.tool infra/task-definition.json
-```
-
-Register the definition:
-
-``` cmd
 aws ecs register-task-definition --cli-input-json file://infra/task-definition.json --region eu-north-1
 ```
 
-This deployment registered `llmops-task:3`. The revision number
-increases with each registration; use the actual revision returned by
-AWS. If the CLI displays `-- More --`, press `Q` to exit the pager.
+Each registration creates the next revision, such as `llmops-task:3`. Note the revision number in the output. If the CLI shows `-- More --`, press `Q` to exit.
 
 ## 10. Step 5: Update the ECS service
 
-The service maintains the desired number of running tasks. This project
-uses one Fargate task with a public IP, a public subnet, and the
-application security group.
+The service keeps the wanted number of tasks running. Create it once, then update it for each release.
 
-  Service setting   Value
-  ----------------- -----------------------
-  Cluster           `llmops-live-cluster`
-  Service           `llmops-service`
-  Desired count     `1`
-  Launch type       `FARGATE`
-  Public IP         `ENABLED`
-  Load balancer     None
+| Setting       | Value                 |
+| ------------- | --------------------- |
+| Cluster       | `llmops-live-cluster` |
+| Service       | `llmops-service`      |
+| Desired count | `1`                   |
+| Launch type   | `FARGATE`             |
+| Public IP     | `ENABLED`             |
+| Load balancer | None                  |
 
-The service already existed, so the release was deployed by updating it
-to task revision 3:
+Point the service at the new revision (replace `REVISION` with the number from Step 4):
 
-``` cmd
-aws ecs update-service --cluster llmops-live-cluster --service llmops-service --task-definition llmops-task:3 --region eu-north-1 --no-cli-pager
+```bat
+aws ecs update-service --cluster llmops-live-cluster --service llmops-service --task-definition llmops-task:REVISION --region eu-north-1 --no-cli-pager
 ```
 
-For another release, substitute the new revision number returned by
-`register-task-definition`.
+Wait until the service is stable:
 
-Wait for stability:
-
-``` cmd
+```bat
 aws ecs wait services-stable --cluster llmops-live-cluster --services llmops-service --region eu-north-1
 ```
 
-Inspect deployments:
+Check the result:
 
-``` cmd
+```bat
 aws ecs describe-services --cluster llmops-live-cluster --services llmops-service --region eu-north-1 --query "services[0].deployments[*].[taskDefinition,status,runningCount,desiredCount,rolloutState]" --output table
 ```
 
-The active revision should eventually show one running task, one desired
-task, and rollout state `COMPLETED`.
+A good result shows one running task, one desired task, and rollout state `COMPLETED`. If it stays `IN_PROGRESS`, see section 14. Do not stop the old healthy task by hand while a new one is still starting.
 
-If deployment remains `IN_PROGRESS`, inspect events:
+## 11. Step 6: Find the public IP
 
-``` cmd
-aws ecs describe-services --cluster llmops-live-cluster --services llmops-service --region eu-north-1 --query "services[0].events[:10].[createdAt,message]" --output table
-```
+A Fargate task can get a new public IP whenever ECS replaces it, so look up the current IP after every deployment or restart.
 
-Do not manually stop the old healthy task while diagnosing a replacement
-that has not started.
+1. Get the running task:
 
-## 11. Step 6: Find the running task and public IP
+   ```bat
+   aws ecs list-tasks --cluster llmops-live-cluster --service-name llmops-service --desired-status RUNNING --region eu-north-1 --query "taskArns[0]" --output text
+   ```
 
-A Fargate task can receive a new public IP when ECS replaces it. Always
-retrieve the current IP after a deployment or task restart.
+2. Get its network interface ID (replace `TASK_ARN`):
 
-List the running task:
+   ```bat
+   aws ecs describe-tasks --cluster llmops-live-cluster --tasks TASK_ARN --region eu-north-1 --query "tasks[0].attachments[0].details[?name=='networkInterfaceId'].value" --output text
+   ```
 
-``` cmd
-aws ecs list-tasks --cluster llmops-live-cluster --service-name llmops-service --desired-status RUNNING --region eu-north-1 --query "taskArns[0]" --output text
-```
+3. Get the public IP (replace `ENI_ID`):
 
-Copy the returned task ARN, then get its network interface ID:
-
-``` cmd
-aws ecs describe-tasks --cluster llmops-live-cluster --tasks TASK_ARN --region eu-north-1 --query "tasks[0].attachments[0].details[?name=='networkInterfaceId'].value" --output text
-```
-
-Replace `TASK_ARN` with the actual ARN. Then get the public IP:
-
-``` cmd
-aws ec2 describe-network-interfaces --network-interface-ids ENI_ID --region eu-north-1 --query "NetworkInterfaces[0].Association.PublicIp" --output text
-```
-
-Replace `ENI_ID` with the actual interface ID.
-
-The latest task documented in this deployment had public IP
-`51.21.247.169`. This is a historical value, not a permanent endpoint. A
-replacement task may receive another IP.
+   ```bat
+   aws ec2 describe-network-interfaces --network-interface-ids ENI_ID --region eu-north-1 --query "NetworkInterfaces[0].Association.PublicIp" --output text
+   ```
 
 ## 12. Step 7: Open and test the application
 
-Open the root endpoint:
+Open these addresses with the IP from step 6:
 
-``` text
+```text
 http://PUBLIC_IP:8080
-```
-
-Open FastAPI Swagger UI:
-
-``` text
 http://PUBLIC_IP:8080/docs
 ```
 
-For the task documented here, the URL was:
+Then test the whole flow:
 
-``` text
-http://51.21.247.169:8080/docs
-```
+1. Open `/docs` and confirm that Swagger UI loads.
+2. Use the upload endpoint to index a document.
+3. Confirm that the app reports the document as indexed.
+4. Ask a question whose answer is in that document.
+5. If the answer fails, check the CloudWatch logs and the Groq secret.
 
-Use the current IP from Section 11 if the task has since been replaced.
+Indexing alone does not prove the Groq key is valid, so always test both indexing and question answering.
 
-Test the application:
+## 13. Step 8: Check the logs
 
-1.  Open `/docs`.
-2.  Confirm Swagger UI loads.
-3.  Use the document upload/index endpoint.
-4.  Confirm the application reports that the document was indexed.
-5.  Ask a question whose answer exists in the uploaded document.
-6.  If generation fails, inspect CloudWatch logs and verify the Groq
-    secret.
-
-Successful indexing alone does not prove the LLM API key is valid. Test
-both ingestion and question answering.
-
-## 13. Step 8: CloudWatch logs
-
-The configured log group is:
-
-``` text
-/ecs/llmopstdlive
-```
-
-In AWS Console, open CloudWatch → Logs → Log groups →
-`/ecs/llmopstdlive`.
-
-Use logs to diagnose container startup, missing environment variables,
-secret retrieval, model initialization, document ingestion, retrieval,
-and Groq API errors. Never log secret values.
+Open the AWS Console and go to **CloudWatch → Logs → Log groups → `/ecs/llmopstdlive`**. Use the logs to diagnose startup errors, missing variables, secret problems, model loading, document ingestion, retrieval, and Groq errors. Never log secret values.
 
 ## 14. Troubleshooting
 
 ### Docker push: TLS handshake timeout
 
-Retry the same `docker push`. In the documented deployment, retrying
-succeeded and Docker reused previously uploaded layers.
+Retry the same `docker push`. Docker reuses the layers that were already uploaded. A TLS timeout by itself is not an IAM permission problem.
 
-### ECS deployment remains in progress
+### ECS deployment stays IN_PROGRESS
 
-Inspect service events and task status:
+Read the service events and the task status:
 
-``` cmd
+```bat
 aws ecs describe-services --cluster llmops-live-cluster --services llmops-service --region eu-north-1 --query "services[0].events[:10].[createdAt,message]" --output table
-```
-
-``` cmd
 aws ecs describe-tasks --cluster llmops-live-cluster --tasks TASK_ARN --region eu-north-1 --query "tasks[0].[lastStatus,healthStatus,taskDefinitionArn,stopReason]" --output table
 ```
 
-In this deployment, revision 3 initially showed `IN_PROGRESS`; ECS then
-started task `5c54b634eb49435198c541fd23c5960b`. The task reached
-`RUNNING` and used `llmops-task:3`.
+`healthStatus: UNKNOWN` is normal when no container health check is set. Judge the task by its status, the rollout state, the logs, and the HTTP endpoint.
 
-`healthStatus: UNKNOWN` can occur when no container health check is
-configured. It is not by itself proof of failure. Check task status,
-rollout, logs, and the HTTP endpoint.
+### Groq returns 401 Invalid API Key
 
-### Hugging Face warnings
+If indexing works but questions fail with `401 Invalid API Key`, the secret holds a wrong or old key, for example after the key was regenerated. Update `llmops/GROQ_API_KEY` with the current key, then force a new deployment so the new task receives it:
 
-The first local test downloaded
-`sentence-transformers/all-MiniLM-L6-v2`. Hugging Face warned that
-unauthenticated requests have lower rate limits. The model loaded
-successfully and produced 384-dimensional embeddings. Optional
-metadata-file 404 checks did not prevent initialization.
-
-### Google API key error
-
-The earlier model loader selected Google embeddings. The active
-configuration was changed to Hugging Face embeddings and Groq LLM, and
-Google integrations were removed from the active `model_loader.py` and
-`config.yaml`.
-
-The local test then succeeded: Hugging Face returned 384-dimensional
-embeddings and Groq returned HTTP 200.
-
-### Groq API returns 401 Invalid API Key
-
-The deployed application successfully indexed a document, but a
-question-answering request failed with:
-
-``` text
-groq.AuthenticationError: 401
-Invalid API Key
-```
-
-The Groq API key had recently been regenerated. The remaining action is
-to update the `llmops/GROQ_API_KEY` secret with the current valid key
-and force a new ECS deployment so the replacement task receives it.
-
-``` cmd
+```bat
 aws ecs update-service --cluster llmops-live-cluster --service llmops-service --force-new-deployment --region eu-north-1 --no-cli-pager
 ```
 
-Wait for service stability, retrieve the new public IP, and retest
-question answering. Do not place the key in source code or
-task-definition JSON.
+Wait for the service to stabilize, find the new public IP (step 6), and test again.
 
-### Public IP no longer works
+### The task cannot start or cannot read a secret
 
-A replacement task may receive a new IP. Retrieve the current task, ENI,
-and IP using Section 11. Also verify that the task is `RUNNING`, the
-security group permits TCP `8080` from your current public IP, the
-application binds to `0.0.0.0:8080`, and the subnet has a route to the
-internet gateway.
+Check that the secret names start with `llmops/`, that the secrets are in `eu-north-1`, and that the full ARNs in the task definition are correct. Then read the service events and the logs.
 
-If your public IP changes, update the CloudFormation `AllowedCidr`
-parameter/security group ingress. Keep access restricted; do not expose
-port 8080 to the whole internet without considering the security
-implications.
+### The public IP no longer works
 
-## 15. Repeatable release checklist
+A replacement task may have a new IP, so look it up again (step 6). Also check these:
 
-For each new application release, assuming infrastructure, ECR, ECS
-service, and secrets already exist:
+- The task status is `RUNNING`.
+- The security group allows TCP `8080` from your current public IP. If your IP changed, update `AllowedCidr`.
+- The app listens on `0.0.0.0:8080`.
+- The subnet has a route to the internet gateway.
 
-1.  Build a new image tag:
+Keep access limited to your IP. Do not open port `8080` to the whole internet without thinking through the risks.
 
-    ``` cmd
-    docker build -t llmopsrepolive:v3 .
-    ```
+### Hugging Face warnings
 
-2.  Authenticate Docker to ECR:
+The first start downloads `sentence-transformers/all-MiniLM-L6-v2`. A warning about unauthenticated requests and 404 messages for optional metadata files are harmless if the model loads.
 
-    ``` cmd
-    aws ecr get-login-password --region eu-north-1 | docker login --username AWS --password-stdin 452975373208.dkr.ecr.eu-north-1.amazonaws.com
-    ```
+## 15. Release checklist
 
-3.  Tag the image:
+Use this for each new release after the infrastructure, service, and secrets exist:
 
-    ``` cmd
-    docker tag llmopsrepolive:v3 452975373208.dkr.ecr.eu-north-1.amazonaws.com/llmopsrepolive:v3
-    ```
+1. Build, tag, and push the image with a new tag:
 
-4.  Push it:
+   ```bat
+   set TAG=v3
+   aws ecr get-login-password --region eu-north-1 | docker login --username AWS --password-stdin %ACCOUNT_ID%.dkr.ecr.eu-north-1.amazonaws.com
+   docker build -t llmopsrepolive:%TAG% .
+   docker tag llmopsrepolive:%TAG% %ECR_URI%:%TAG%
+   docker push %ECR_URI%:%TAG%
+   ```
 
-    ``` cmd
-    docker push 452975373208.dkr.ecr.eu-north-1.amazonaws.com/llmopsrepolive:v3
-    ```
+2. Change the `image` field in `infra/task-definition.json` to the new tag.
+3. Validate the JSON and register a new revision (step 4).
+4. Update the service with the revision number that AWS returns (step 5).
+5. Wait for the service to be stable (step 5).
+6. Find the new public IP (step 6).
+7. Open `/docs`, upload a document, and ask a question (step 7).
 
-5.  Change the `image` field in `infra/task-definition.json` to the new
-    tag.
+## 16. Security and production notes
 
-6.  Validate the JSON:
+This setup exposes FastAPI directly on the task's public IP, with no load balancer and no domain name. That is fine for a controlled demo. For production, consider:
 
-    ``` cmd
-    python -m json.tool infra/task-definition.json
-    ```
+- An Application Load Balancer with HTTPS and a domain name
+- Authentication for the API endpoints
+- A stable endpoint, because task public IPs change
+- Container health checks
+- Monitoring, alarms, and log retention (the stack keeps logs for 14 days)
+- Image scanning and dependency updates
 
-7.  Register a new revision:
+A desired count of one keeps one task running all the time, which costs money. Scale the service down or delete the resources when you no longer need them, and check Fargate, ECR storage, CloudWatch Logs, and data transfer costs.
 
-    ``` cmd
-    aws ecs register-task-definition --cli-input-json file://infra/task-definition.json --region eu-north-1
-    ```
+## 17. Useful AWS Console links
 
-8.  Update the service using the revision returned by AWS. Example only,
-    if the returned revision is 4:
-
-    ``` cmd
-    aws ecs update-service --cluster llmops-live-cluster --service llmops-service --task-definition llmops-task:4 --region eu-north-1 --no-cli-pager
-    ```
-
-9.  Wait for stability:
-
-    ``` cmd
-    aws ecs wait services-stable --cluster llmops-live-cluster --services llmops-service --region eu-north-1
-    ```
-
-10. Retrieve the new public IP using Section 11.
-
-11. Test `http://PUBLIC_IP:8080/docs`, upload a document, and ask a
-    question.
-
-Use a new unique image tag for each release rather than relying on a
-mutable `latest` tag.
-
-## 16. Security and production considerations
-
-This deployment exposes FastAPI directly through the Fargate task public
-IP. It does not use an Application Load Balancer or a custom domain.
-This is convenient for a controlled project demonstration, but a
-production setup should consider:
-
--   Application Load Balancer and HTTPS/TLS.
--   Domain name and managed certificate.
--   Authentication and authorization for API endpoints.
--   Stable endpoint, because task public IPs can change.
--   Container health checks.
--   Monitoring, alarms, and log retention.
--   Image scanning and dependency updates.
--   Cost monitoring for Fargate, ECR storage, CloudWatch Logs, and data
-    transfer.
-
-The CloudFormation stack configured a 14-day CloudWatch log retention
-period. A service desired count of one is intended to keep one task
-running continuously, which incurs ongoing Fargate charges. Scale down
-or delete resources when they are no longer required, while checking for
-other billable resources.
-
-## 17. Deployment completion summary
-
-Completed in the deployment documented here:
-
--   Built and tested the FastAPI Docker container locally.
--   Created AWS infrastructure using CloudFormation.
--   Created the ECR repository and pushed the application image.
--   Created the ECS cluster and Fargate service.
--   Configured public subnet, public IP assignment, and security group.
--   Stored Groq and LangSmith API keys in Secrets Manager.
--   Configured ECS task CPU, memory, port, environment variables,
-    secrets, execution role, and CloudWatch logging.
--   Changed model configuration to Groq for LLM and Hugging Face for
-    embeddings.
--   Verified the model loader locally: Hugging Face produced
-    384-dimensional embeddings and Groq returned a successful response.
--   Built and pushed Docker image `v2`.
--   Registered ECS task definition revision `llmops-task:3`.
--   Updated the ECS service to revision 3.
--   Confirmed the new Fargate task reached `RUNNING`.
--   Retrieved a public IP and opened the FastAPI application.
--   Uploaded and indexed one document through the deployed application.
-
-**Remaining action:** Document indexing worked, but question answering
-returned Groq `401 Invalid API Key`. The Groq key had recently been
-regenerated. Update `llmops/GROQ_API_KEY` in Secrets Manager, force a
-new ECS deployment, retrieve the replacement task's public IP, and
-retest question answering.
-
-## 18. Useful AWS Console links
-
--   [CloudFormation
-    stacks](https://eu-north-1.console.aws.amazon.com/cloudformation/home?region=eu-north-1#/stacks)
--   [ECR
-    repositories](https://eu-north-1.console.aws.amazon.com/ecr/repositories?region=eu-north-1)
--   [ECS
-    clusters](https://eu-north-1.console.aws.amazon.com/ecs/v2/clusters?region=eu-north-1)
--   [Secrets
-    Manager](https://eu-north-1.console.aws.amazon.com/secretsmanager/listsecrets?region=eu-north-1)
--   [CloudWatch log
-    groups](https://eu-north-1.console.aws.amazon.com/cloudwatch/home?region=eu-north-1#logsV2:log-groups)
+- [CloudFormation stacks](https://eu-north-1.console.aws.amazon.com/cloudformation/home?region=eu-north-1#/stacks)
+- [ECR repositories](https://eu-north-1.console.aws.amazon.com/ecr/repositories?region=eu-north-1)
+- [ECS clusters](https://eu-north-1.console.aws.amazon.com/ecs/v2/clusters?region=eu-north-1)
+- [Secrets Manager](https://eu-north-1.console.aws.amazon.com/secretsmanager/listsecrets?region=eu-north-1)
+- [CloudWatch log groups](https://eu-north-1.console.aws.amazon.com/cloudwatch/home?region=eu-north-1#logsV2:log-groups)

@@ -4,29 +4,33 @@
 
 ## Table of contents
 
-- [1. Where this document belongs](#1-where-this-document-belongs)
-- [2. Deployment overview](#2-deployment-overview)
-- [3. What CloudFormation does](#3-what-cloudformation-does)
-- [4. Resources created by the template](#4-resources-created-by-the-template)
-- [5. What the template does not create](#5-what-the-template-does-not-create)
-- [6. The ECS task definition](#6-the-ecs-task-definition-task-definitionjson)
-- [7. Region and naming](#7-region-and-naming)
-- [8. Deploy the infrastructure](#8-deploy-the-infrastructure)
-- [9. Check the stack](#9-check-the-stack)
-- [10. Which resources cost money](#10-which-resources-cost-money)
-- [11. Delete the infrastructure](#11-delete-the-infrastructure)
-- [12. IAM and safe practice](#12-iam-and-safe-practice)
-- [13. Summary](#13-summary)
+- [AWS Infrastructure Guide for the End-to-End LLMOps Project](#aws-infrastructure-guide-for-the-end-to-end-llmops-project)
+  - [Table of contents](#table-of-contents)
+  - [1. Where this document belongs](#1-where-this-document-belongs)
+  - [2. Deployment overview](#2-deployment-overview)
+  - [3. What CloudFormation does](#3-what-cloudformation-does)
+  - [4. Resources created by the template](#4-resources-created-by-the-template)
+  - [5. What the template does not create](#5-what-the-template-does-not-create)
+  - [6. The ECS task definition (`task-definition.json`)](#6-the-ecs-task-definition-task-definitionjson)
+  - [7. Region and naming](#7-region-and-naming)
+  - [8. Deploy the infrastructure](#8-deploy-the-infrastructure)
+  - [9. Check the stack](#9-check-the-stack)
+  - [10. Which resources cost money](#10-which-resources-cost-money)
+  - [11. Delete the infrastructure](#11-delete-the-infrastructure)
+  - [12. IAM and safe practice](#12-iam-and-safe-practice)
+  - [13. Summary](#13-summary)
 
 ## 1. Where this document belongs
 
-Save this file at `infra/AWS_INFRASTRUCTURE_GUIDE.md`, next to the template it documents, and link to it from the main `README.md`:
+Save this file at `infra/AWS_INFRASTRUCTURE_GUIDE.md`, next to the template it documents. It explains **what exists and why**: the resources, the cost, and how to delete them. The step by step release process is in the [deployment guide](AWS_DEPLOYMENT_GUIDE_LLMOPS.md). Link to both from the main `README.md`:
 
 ```markdown
-## AWS Infrastructure
+## AWS
 
-See [AWS Infrastructure Guide](infra/AWS_INFRASTRUCTURE_GUIDE.md) for the
-CloudFormation resources, deployment and cleanup steps, and cost notes.
+- [AWS Infrastructure Guide](infra/AWS_INFRASTRUCTURE_GUIDE.md): CloudFormation
+  resources, cost notes, and cleanup.
+- [AWS Deployment Guide](infra/AWS_DEPLOYMENT_GUIDE_LLMOPS.md): build, push,
+  and release the app step by step.
 ```
 
 ## 2. Deployment overview
@@ -36,7 +40,7 @@ Docker packages the application, Amazon ECR stores the image, and Amazon ECS wit
 1. A developer pushes code to the GitHub repository.
 2. GitHub Actions signs in to AWS with OpenID Connect (OIDC) and assumes an IAM deployment role.
 3. The workflow builds the Docker image and pushes it to ECR.
-4. The workflow registers the ECS task definition (`.github/workflows/task-definition.json`).
+4. The workflow registers the ECS task definition (`infra/task-definition.json`).
 5. ECS runs the task on Fargate in the public subnet, and the task writes logs to CloudWatch Logs.
 6. Users reach the application through the task's public IP on port 8080.
 
@@ -47,7 +51,7 @@ GitHub repository -> GitHub Actions -> (OIDC) IAM deployment role
                                          -> Application on TCP 8080
 ```
 
-The CloudFormation template creates only the **supporting infrastructure**. It does not build the image, register the task definition, create the ECS service, or start a Fargate task.
+The CloudFormation template creates only the **supporting infrastructure**. It does not build the image, register the task definition, create the ECS service, or start a Fargate task. The [deployment guide](AWS_DEPLOYMENT_GUIDE_LLMOPS.md) shows the same steps run by hand from the command line.
 
 ## 3. What CloudFormation does
 
@@ -98,104 +102,39 @@ A cluster can exist while no application is running, and a repository can exist 
 
 | Not created by the template | What it does                                                      | When it is needed                                            |
 | --------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------ |
-| ECS task definition         | Describes the container image, CPU, memory, port, roles, secrets, and logging | Before ECS can run the app. It lives in `.github/workflows/task-definition.json`. See section 6, and the AWS CI/CD deployment guide for how the workflow uses it |
+| ECS task definition         | Describes the container image, CPU, memory, port, roles, secrets, and logging | Before ECS can run the app. It lives in `infra/task-definition.json`. See section 6 |
 | ECS service                 | Keeps the wanted number of tasks running                          | To run the app as a service                                  |
 | Fargate task                | The running container                                             | When a task or service starts                                |
 | Public IP                   | Address a running task gets when public IP is enabled             | When the task launches                                       |
 | Application Load Balancer   | A managed entry point to the tasks                                | Optional, and not used in this design                        |
-| Secrets Manager secrets     | Stores the real Gemini and Groq API key values                    | Create separately, with a name that starts with `llmops/` so the execution role can read it. The `secrets` block in the task definition points to it |
+| Secrets Manager secrets     | Stores the real Groq and LangSmith API key values                | Create separately as `llmops/GROQ_API_KEY` and `llmops/LANGCHAIN_API_KEY`. The names must start with `llmops/` so the execution role can read them |
 | Docker image                | The packaged application                                          | Built locally or by CI, then pushed to ECR                   |
 
 ## 6. The ECS task definition (`task-definition.json`)
 
-The task definition is the instruction sheet that tells ECS how to run your container: which image, how much CPU and memory, which port, which secrets, and where to send logs. Think of it as an order form, and the Fargate task is the meal that is made from it. The file is stored at `.github/workflows/task-definition.json`, and the deploy workflow registers it with ECS. Each registration creates a new **revision**, and the ECS service uses the latest one.
+The task definition is the instruction sheet that tells ECS how to run your container: which image, how much CPU and memory, which port, which secrets, and where to send logs. Think of it as an order form, and the Fargate task is the meal that is made from it. The file is `infra/task-definition.json`. It is not part of the CloudFormation stack. Each time it is registered, ECS creates a new **revision**, and the service uses the revision you point it at.
 
-```json
-{
-  "family": "llmops-task",
-  "networkMode": "awsvpc",
-  "requiresCompatibilities": ["FARGATE"],
-  "cpu": "1024",
-  "memory": "4096",
-  "executionRoleArn": "arn:aws:iam::YOUR_ACCOUNT_ID:role/YOUR_EXECUTION_ROLE_NAME",
-  "containerDefinitions": [
-    {
-      "name": "llmops-container",
-      "image": "YOUR_ACCOUNT_ID.dkr.ecr.eu-north-1.amazonaws.com/llmopsrepolive:IMAGE_TAG",
-      "essential": true,
-      "portMappings": [
-        {
-          "containerPort": 8080,
-          "protocol": "tcp"
-        }
-      ],
-      "environment": [
-        {
-          "name": "ENV",
-          "value": "production"
-        }
-      ],
-      "secrets": [
-        {
-          "name": "apikeyliveclass",
-          "valueFrom": "arn:aws:secretsmanager:eu-north-1:YOUR_ACCOUNT_ID:secret:llmops/apikeyliveclass-XXXXXX"
-        }
-      ],
-      "logConfiguration": {
-        "logDriver": "awslogs",
-        "options": {
-          "awslogs-group": "/ecs/llmopstdlive",
-          "awslogs-region": "eu-north-1",
-          "awslogs-stream-prefix": "ecs"
-        }
-      }
-    }
-  ]
-}
-```
+The file itself is the source of truth, so this guide does not copy it. To edit, register, and release it, follow [step 4 of the deployment guide](AWS_DEPLOYMENT_GUIDE_LLMOPS.md#9-step-4-register-the-ecs-task-definition).
 
-| Field                     | Value                                   | Meaning                                                                     |
-| ------------------------- | --------------------------------------- | --------------------------------------------------------------------------- |
-| `family`                  | `llmops-task`                           | The name that groups all revisions of this task definition                  |
-| `networkMode`             | `awsvpc`                                | Gives each task its own network interface, which Fargate requires           |
-| `requiresCompatibilities` | `FARGATE`                               | Runs the task on Fargate, so there are no servers to manage                 |
-| `cpu` and `memory`        | `1024` and `4096`                       | 1 vCPU and 4 GB of memory for the whole task                                |
-| `executionRoleArn`        | placeholder                             | The execution role from the stack, used to pull the image, write logs, and read secrets |
-| `name`                    | `llmops-container`                      | The container name. The deploy workflow must use the same name              |
-| `image`                   | placeholder                             | The image in the `llmopsrepolive` ECR repository                            |
-| `essential`               | `true`                                  | If this container stops, the whole task stops                               |
-| `containerPort`           | `8080`                                  | The app port. It must match the Security Group rule                         |
-| `environment`             | `ENV=production`                        | A plain setting passed to the container                                     |
-| `secrets`                 | `apikeyliveclass`                       | ECS reads the Secrets Manager secret and gives the container its value as the `apikeyliveclass` environment variable |
-| `awslogs-group`           | `/ecs/llmopstdlive`                     | The CloudWatch log group created by the stack                               |
-| `awslogs-region`          | `eu-north-1`                            | The region of the log group                                                 |
-| `awslogs-stream-prefix`   | `ecs`                                   | Prefix for the log streams in the group                                     |
+**How the file connects to the infrastructure.** These values in the task definition must match what the stack created:
 
-**How it connects to the infrastructure.** The log group, region, port 8080, and ECR repository name match the resources in section 4. The secret path `llmops/` matches the `ReadLLMOpsSecrets` policy on the execution role.
+| In `task-definition.json`                  | Must match                                                                 |
+| ------------------------------------------ | -------------------------------------------------------------------------- |
+| `image` (`.../llmopsrepolive:TAG`)         | The ECR repository `llmopsrepolive` in `eu-north-1`                        |
+| `containerPort` `8080`                     | The inbound rule on the Security Group, and the port the app listens on    |
+| `awslogs-group` `/ecs/llmopstdlive`        | The CloudWatch log group created by the stack                              |
+| `awslogs-region` `eu-north-1`              | The region of the stack                                                    |
+| `executionRoleArn`                         | The ECS task execution role created by the stack                           |
+| `secrets` (`llmops/GROQ_API_KEY` and `llmops/LANGCHAIN_API_KEY`) | The `llmops/*` path allowed by the `ReadLLMOpsSecrets` policy |
 
-**Placeholders to fill in.** Fix them in the file, or let the workflow fill them in before it registers the task definition:
+If one of these does not match, the usual symptoms are a task that cannot pull the image, no logs, an unreachable app, or an access denied error on a secret.
 
-| Placeholder                | Where the real value comes from                                                           |
-| -------------------------- | ----------------------------------------------------------------------------------------- |
-| `YOUR_ACCOUNT_ID`          | Your 12 digit AWS account ID                                                              |
-| `YOUR_EXECUTION_ROLE_NAME` | The name of the execution role created by the stack (IAM → Roles, or the stack outputs)   |
-| `IMAGE_TAG`                | A unique tag for each build. The workflow usually replaces the whole `image` value        |
-| `XXXXXX`                   | The random ending that AWS adds to the secret's ARN (Secrets Manager → your secret)       |
+**Things to remember**
 
-**Image tags.** ECR tags are `IMMUTABLE`, so a tag cannot be overwritten. Do not reuse a tag such as `latest`. Give every deployment a new unique tag, for example the Git commit ID, or the push will fail.
-
-**The secret.** Create it in `eu-north-1` with a name that starts with `llmops/`, for example `llmops/apikeyliveclass`. The execution role can only read secrets under `llmops/*`, so a secret with any other name makes the task fail to start with an access denied error. The secret value is JSON with the keys the app needs:
-
-```json
-{
-  "GOOGLE_API_KEY": "your Gemini key",
-  "GROQ_API_KEY": "your Groq key"
-}
-```
-
-**What is left out on purpose.** `awslogs-create-group` is not used, because the stack creates the log group and the standard execution policy does not allow creating one. `hostPort`, the port `name`, and `appProtocol` are not needed. A container level `cpu` is not needed, because the task level value already applies.
-
-**Sizing.** 1024 CPU with 4096 MB memory is a valid Fargate pair. If the app loads a Hugging Face embedding model and the task stops with exit code 137, it ran out of memory, so raise `memory` (8192 is valid with 1024 CPU), which also raises the cost.
+- **Image tags:** ECR tags are `IMMUTABLE`, so a tag cannot be overwritten. Use a new unique tag for every release, and never reuse `latest`.
+- **Secrets:** never put key values in the file. It only holds the secret ARNs.
+- **Log group:** the stack creates it, so the file does not need `awslogs-create-group`.
+- **Sizing:** the task uses 1024 CPU and 4096 MB memory. If the task stops with exit code 137, it ran out of memory, so raise `memory` (8192 is valid with 1024 CPU), which also raises the cost.
 
 ## 7. Region and naming
 
@@ -226,22 +165,7 @@ Validate the template. This checks the template format only. It does not create 
 aws cloudformation validate-template --template-body file://infra/cloudformation.yml --region eu-north-1 --no-cli-pager
 ```
 
-Deploy it. Replace `YOUR_PUBLIC_IP` with your own public IPv4 address:
-
-```bat
-aws cloudformation deploy --template-file infra/cloudformation.yml --stack-name llmops-infrastructure --capabilities CAPABILITY_NAMED_IAM --parameter-overrides GitHubOwner=i-am-tushaar GitHubRepo=End-to-End-LLMOPs-Project AllowedCidr=YOUR_PUBLIC_IP/32 --region eu-north-1
-```
-
-| Part                                  | Meaning                                                    |
-| ------------------------------------- | ---------------------------------------------------------- |
-| `deploy`                              | Creates the stack, or updates it if it already exists      |
-| `--template-file`                     | The local YAML template                                    |
-| `--stack-name`                        | The stack name                                             |
-| `--capabilities CAPABILITY_NAMED_IAM` | Confirms the template creates named IAM resources          |
-| `--parameter-overrides`               | Values for the template parameters                         |
-| `AllowedCidr=...`                     | Limits inbound port 8080 to your IP                        |
-
-A successful run ends with `Successfully created/updated stack - llmops-infrastructure`.
+Then deploy the stack with the command in [step 1 of the deployment guide](AWS_DEPLOYMENT_GUIDE_LLMOPS.md#6-step-1-create-the-infrastructure). It explains each argument and how to find the IP address for `AllowedCidr`. A successful run ends with `Successfully created/updated stack - llmops-infrastructure`.
 
 ## 9. Check the stack
 
@@ -303,7 +227,7 @@ The identity that runs CloudFormation needs permission to create, change, and de
 2. Remove the `AdministratorAccess` policy from the IAM user.
 3. Use a narrow IAM policy or deployment role for future work.
 4. Prefer GitHub OIDC and temporary role credentials over long lived AWS access keys in GitHub.
-5. Rotate or deactivate any key that was exposed, and never commit `.env`, AWS keys, or Gemini and Groq API keys to Git.
+5. Rotate or deactivate any key that was exposed, and never commit `.env`, AWS keys, or Groq and LangSmith API keys to Git.
 
 ## 13. Summary
 
@@ -311,7 +235,7 @@ The identity that runs CloudFormation needs permission to create, change, and de
 - The VPC, subnet, Internet Gateway, route table, and Security Group give the network. ECR stores the image, ECS provides the cluster, and CloudWatch Logs keeps container logs.
 - IAM roles and the GitHub OIDC provider let ECS start tasks and let GitHub Actions deploy without stored keys.
 - The template does not run the app. The task definition, ECS service, and Fargate task are separate steps.
-- `task-definition.json` tells ECS how to run the container. Fill in the placeholders, use a new image tag for every deployment, and name the secret with the `llmops/` prefix.
+- `infra/task-definition.json` tells ECS how to run the container. Its image, port, log group, role, and secret names must match the stack, and each release needs a new image tag. The [deployment guide](AWS_DEPLOYMENT_GUIDE_LLMOPS.md) covers the release steps.
 - Delete the stack when practice is finished, then check for separately created resources, remove temporary admin rights, and review your billing.
 
 **Always check current AWS pricing and the actual resources in your account before leaving anything running.**

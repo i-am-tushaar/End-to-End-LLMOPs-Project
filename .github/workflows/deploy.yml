@@ -1,112 +1,113 @@
 
 name: CD - Deploy to AWS ECS Fargate
 
-# Start deployment after CI completes
+# Start deployment after the CI workflow completes
 on:
   workflow_run:
     workflows: ["CI"]
-    branches: [main]
+    branches:
+      - main
     types:
       - completed
 
-# Permissions required for GitHub OIDC
+# Permissions required for GitHub OIDC authentication
 permissions:
   id-token: write
   contents: read
 
-# AWS configuration
+# Prevent overlapping deployments
+concurrency:
+  group: llmops-ecs-production
+  cancel-in-progress: false
+
 env:
-  AWS_REGION: us-east-1
+  AWS_REGION: eu-north-1
   ECR_REPOSITORY: llmopsrepolive
+  ECS_SERVICE: llmops-service
   ECS_CLUSTER: llmops-live-cluster
-  ECS_SERVICE: llmops-live-service
-  ECS_TASK_DEFINITION: .github/workflows/task-definition.json
-  CONTAINER_NAME: llmops-live-container
+  ECS_TASK_DEFINITION: infra/task-definition.json
+  CONTAINER_NAME: llmops-container
 
 jobs:
 
-  # --------------------------------
-  # 1. Build and Push Docker Image
-  # --------------------------------
+  # 1. Verify that CI succeeded
+  check-status:
+    name: Check CI Status
+    runs-on: ubuntu-latest
+
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+
+    steps:
+      - name: Confirm CI success
+        run: echo "CI passed. Starting deployment."
+
+  # 2. Build and push Docker image to ECR
   build-and-push:
-
-    name: Build and Push to ECR
-
-    # Deploy only after successful CI push to main
-    if: >-
-      ${{
-        github.event.workflow_run.conclusion == 'success' &&
-        github.event.workflow_run.event == 'push' &&
-        github.event.workflow_run.head_branch == 'main'
-      }}
-
+    name: Build and Push Docker Image
+    needs: check-status
     runs-on: ubuntu-latest
 
     outputs:
       image: ${{ steps.build-image.outputs.image }}
 
     steps:
-
       # Checkout the exact commit tested by CI
-      - name: Checkout Code
+      - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
-      # Configure AWS credentials using OIDC
+      # Authenticate with AWS using OIDC
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # Authenticate Docker with Amazon ECR
+      # Login to Amazon ECR
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      # Build and push Docker image
+      # Build and push image with the commit SHA as its tag
       - name: Build and Push Docker Image
         id: build-image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
         run: |
-          IMAGE_URI=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          IMAGE_URI="$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
-          docker build -t $IMAGE_URI .
+          docker build -t "$IMAGE_URI" .
+          docker push "$IMAGE_URI"
 
-          docker push $IMAGE_URI
+          echo "image=$IMAGE_URI" >> "$GITHUB_OUTPUT"
 
-          echo "image=$IMAGE_URI" >> $GITHUB_OUTPUT
-
-  # --------------------------------
-  # 2. Deploy to ECS Fargate
-  # --------------------------------
+  # 3. Deploy the new image to ECS Fargate
   deploy:
-
     name: Deploy to ECS Fargate
-
     needs: build-and-push
-
     runs-on: ubuntu-latest
 
     steps:
-
-      # Checkout repository
-      - name: Checkout Code
+      # Checkout the same commit used to build the image
+      - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
-      # Configure AWS credentials
+      # Authenticate with AWS using OIDC
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # Update image in ECS task definition
+      # Update the image in the ECS task definition
       - name: Render ECS Task Definition
         id: render-task
         uses: aws-actions/amazon-ecs-render-task-definition@v1
@@ -115,15 +116,15 @@ jobs:
           container-name: ${{ env.CONTAINER_NAME }}
           image: ${{ needs.build-and-push.outputs.image }}
 
-      # Deploy updated task definition
-      - name: Deploy to ECS
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+      # Deploy the updated task definition to ECS
+      - name: Deploy to Amazon ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
         with:
           task-definition: ${{ steps.render-task.outputs.task-definition }}
           service: ${{ env.ECS_SERVICE }}
           cluster: ${{ env.ECS_CLUSTER }}
           wait-for-service-stability: true
 
-      # Deployment completed
+      # Confirm deployment
       - name: Deployment Successful
-        run: echo "LLMOps application deployed successfully to AWS ECS Fargate!"
+        run: echo "LLMOps application deployed successfully to AWS ECS Fargate."

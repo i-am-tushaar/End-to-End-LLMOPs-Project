@@ -1,44 +1,32 @@
-
-# ============================================================================
-# Embedding Model Configuration
-# ============================================================================
-
+# Embedding model configuration
 embedding_model:
-  # Embedding provider: Hugging Face
   huggingface:
     provider: "huggingface"
     model_name: "sentence-transformers/all-MiniLM-L6-v2"
 
-    # Other recommended models:
-    # BAAI/bge-small-en-v1.5
-    # BAAI/bge-base-en-v1.5
-    # intfloat/e5-base-v2
-    # intfloat/multilingual-e5-base
+  # Optional Google provider. Select with EMBEDDING_PROVIDER=google.
+  google:
+    provider: "google"
+    model_name: "models/gemini-embedding-001"
 
-
-# ============================================================================
-# Retriever Configuration
-# ============================================================================
-
+# Retriever configuration
 retriever:
   top_k: 10
   search_type: "mmr"  # similarity | mmr | similarity_score_threshold
   fetch_k: 20
-  lambda_mult: 0.5    # 0 = more diversity, 1 = more relevance
+  lambda_mult: 0.5
 
-
-# ============================================================================
-# LLM Configuration
-# ============================================================================
-
+# LLM configuration
 llm:
-  # LLM provider: Groq
   groq:
     provider: "groq"
     model_name: "openai/gpt-oss-20b"
     temperature: 0
     max_output_tokens: 2048
 
-    # Other supported models:
-    # llama-3.3-70b-versatile
-    # openai/gpt-oss-120b
+  # Optional Google provider. Select with LLM_PROVIDER=google.
+  google:
+    provider: "google"
+    model_name: "gemini-2.0-flash"
+    temperature: 0
+    max_output_tokens: 2048

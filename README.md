@@ -1,489 +1,282 @@
-# End-to-End LLMOps Project: Multi-Document RAG Chatbot
+# End-to-End LLMOps Project
 
-An end-to-end Large Language Model Operations (LLMOps) project that demonstrates how to build, evaluate, test, monitor, and containerize a production-oriented Retrieval-Augmented Generation (RAG) application.
+An end-to-end Retrieval-Augmented Generation (RAG) application with evaluation, observability, containerization, and automated deployment to AWS ECS Fargate.
 
-The application allows users to upload and interact with multiple documents, retrieve relevant information using semantic search, and generate context-aware answers using Large Language Models (LLMs).
+[![Python](https://img.shields.io/badge/Python-3.12-blue)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/API-FastAPI-009688)](https://fastapi.tiangolo.com/)
+[![Docker](https://img.shields.io/badge/Container-Docker-2496ED)](https://www.docker.com/)
+[![AWS](https://img.shields.io/badge/Cloud-AWS%20ECS%20Fargate-orange)](https://aws.amazon.com/fargate/)
 
-The project focuses not only on building a RAG application but also on implementing the engineering practices required to make LLM-powered applications reliable, measurable, maintainable, and deployable.
+## Table of Contents
 
----
+- [Overview](#overview)
+- [Why I Built This Project](#why-i-built-this-project)
+- [Architecture](#architecture)
+- [Key Features](#key-features)
+- [Technology Stack](#technology-stack)
+- [RAG Workflow](#rag-workflow)
+- [Evaluation Results](#evaluation-results)
+- [Observability and Monitoring](#observability-and-monitoring)
+- [Project Structure](#project-structure)
+- [Run Locally](#run-locally)
+- [Run with Docker](#run-with-docker)
+- [AWS Deployment](#aws-deployment)
+- [CI/CD Pipeline](#cicd-pipeline)
+- [Security](#security)
+- [Cost Considerations](#cost-considerations)
+- [Current Status and Known Issue](#current-status-and-known-issue)
+- [Future Improvements](#future-improvements)
+- [What I Learned](#what-i-learned)
+- [Interview Explanation](#interview-explanation)
+- [Documentation](#documentation)
 
-## 1. Project Overview
+## Overview
 
-Large Language Models can generate impressive responses, but they can sometimes produce inaccurate or hallucinated information. They also have limitations when answering questions about private, domain-specific, or frequently updated documents.
+This project demonstrates how to build and operate a production-oriented, multi-document RAG application. Users can upload documents, have their content indexed, and ask questions grounded in the retrieved document context.
 
-To address these challenges, this project implements a Multi-Document RAG Chatbot.
+The project covers more than the RAG chain. It includes automated evaluation, testing, tracing, Docker packaging, AWS infrastructure, and a GitHub Actions deployment pipeline.
 
-Instead of relying entirely on the LLM's internal knowledge, the application retrieves relevant information from uploaded documents and provides that information as context to the LLM before generating an answer.
+## Why I Built This Project
 
-Along with the RAG application, this project implements an LLMOps workflow covering:
+A RAG prototype can answer questions, but a deployable application also needs ways to test answer quality, observe runtime behavior, manage secrets, package the application, and release changes reliably.
 
-- Document ingestion and processing.
-- Text chunking and embedding generation.
-- Vector-based document retrieval.
-- Context-aware answer generation.
-- Component-level, pipeline-level, and application-level evaluation.
-- LLM-as-a-Judge using Groq.
-- Automated testing using Pytest.
-- Observability and tracing using LangSmith.
-- Docker image creation and containerization.
-- Continuous Integration using GitHub Actions.
+I built this project to bring those pieces together in one end-to-end LLMOps workflow.
 
-## 2. Problem Statement
-
-Traditional LLM applications often face the following challenges:
-
-- Hallucinations and incorrect responses.
-- Limited knowledge of private documents.
-- Difficulty retrieving relevant information from multiple documents.
-- Lack of systematic evaluation.
-- No clear visibility into model performance and latency.
-- Difficulty maintaining consistent application quality.
-- Deployment and environment dependency issues.
-
-This project addresses these challenges by combining RAG architecture with evaluation, observability, testing, and containerization.
-
-## 3. Key Features
-
-### RAG Application
-- Multi-document question answering.
-- Document ingestion and text extraction.
-- Text splitting and chunking.
-- Semantic embeddings.
-- FAISS vector database.
-- Context-aware answer generation.
-- Gemini and Groq LLM integration.
-
-### Evaluation Framework
-- Component-level evaluation.
-- Pipeline-level evaluation.
-- Application-level evaluation.
-- LLM-as-a-Judge using Groq.
-- DeepEval-based evaluation.
-- Retrieval quality measurement.
-- Faithfulness and answer relevancy measurement.
-- Safety, toxicity, scope, and PII leakage evaluation.
-- Latency measurement and performance analysis.
-
-### Observability
-- LangSmith tracing.
-- Execution monitoring.
-- Latency tracking.
-- Cost monitoring.
-- Evaluation dashboards.
-- Alert configuration.
-
-### Engineering and Deployment
-- Modular Python architecture.
-- Custom logging and exception handling.
-- Configuration management.
-- Unit and integration testing using Pytest.
-- Dependency management using uv.
-- Docker image creation.
-- Docker container execution.
-- GitHub Actions CI workflow.
-
-## 4. Technology Stack
-
-| Category | Technologies |
-|---|---|
-| Programming Language | Python |
-| API Framework | FastAPI |
-| LLM Framework | LangChain |
-| LLM Providers | Google Gemini, Groq |
-| Embedding Models | Sentence Transformers, BGE |
-| Vector Database | FAISS |
-| Evaluation | DeepEval, Groq LLM Judge |
-| Observability | LangSmith |
-| Logging | Structlog |
-| Testing | Pytest, Pytest-Cov, HTTPX |
-| Dependency Management | uv |
-| Containerization | Docker |
-| CI | GitHub Actions |
-| Document Processing | PyPDF, docx2txt |
-| Version Control | Git, GitHub |
-
-## 5. System Architecture
-
-The project consists of two major workflows:
-
-1. RAG Application Workflow
-2. LLMOps Evaluation and Monitoring Workflow
-
-### 5.1 RAG Application Architecture
-
-The following diagram represents the main application workflow.
+## Architecture
 
 ```mermaid
 flowchart TD
     A[User] --> B[FastAPI Application]
+    B --> C[Document Ingestion]
+    C --> D[Text Processing and Chunking]
+    D --> E[Embeddings]
+    E --> F[FAISS Vector Store]
+    B --> G[Question Processing]
+    G --> H[Retriever]
+    H --> F
+    H --> I[Retrieved Context]
+    I --> J[Groq LLM]
+    J --> K[Grounded Answer]
+    K --> A
 
-    B --> C[Document Upload]
-    C --> D[Document Ingestion]
-
-    D --> E[Text Extraction]
-    E --> F[Text Chunking]
-
-    F --> G[Embedding Generation]
-    G --> H[FAISS Vector Database]
-
-    I[User Question] --> J[Query Embedding]
-    J --> K[Retriever]
-
-    H --> K
-    K --> L[Relevant Context]
-
-    L --> M[Prompt Construction]
-    I --> M
-
-    M --> N[Gemini / Groq LLM]
-    N --> O[Generated Answer]
-    O --> P[Response to User]
+    B --> L[LangSmith Tracing]
+    M[DeepEval Evaluation] --> B
+    N[Pytest] --> B
 ```
 
-### 5.2 LLMOps Evaluation Architecture
-
-The evaluation framework measures the quality and reliability of the RAG application at three levels.
+### AWS deployment architecture
 
 ```mermaid
 flowchart TD
-    A[RAG Application] --> B[Evaluation Framework]
-
-    B --> C[Component Level]
-    B --> D[Pipeline Level]
-    B --> E[Application Level]
-
-    C --> F[Retriever Evaluation]
-    C --> G[Generator Evaluation]
-
-    D --> H[RAG Triad Evaluation]
-    H --> I[Faithfulness]
-    H --> J[Answer Relevancy]
-    H --> K[Contextual Relevancy]
-
-    E --> L[Correctness]
-    E --> M[Completeness]
-    E --> N[Style]
-
-    F --> O[Evaluation Results]
-    G --> O
-    I --> O
-    J --> O
-    K --> O
-    L --> O
-    M --> O
-    N --> O
-
-    O --> P[Reports and Analysis]
+    A[Developer pushes to GitHub] --> B[GitHub Actions]
+    B --> C[CI: install dependencies and run tests]
+    C --> D[Build Docker image]
+    D --> E[Push image to Amazon ECR]
+    E --> F[Register ECS task definition]
+    F --> G[Deploy to Amazon ECS]
+    G --> H[AWS Fargate runs the container]
+    H --> I[Users access FastAPI application]
+    H --> J[Amazon CloudWatch Logs]
+    K[AWS Secrets Manager] --> H
 ```
 
-## 6. RAG Pipeline Explanation
+## Key Features
 
-The RAG pipeline consists of the following stages.
+- Multi-document upload and ingestion.
+- Document parsing, text processing, chunking, and indexing.
+- Semantic retrieval using embeddings and FAISS.
+- Retrieval-Augmented Generation using LangChain and a Groq-hosted LLM.
+- Retrieval optimization experiments, including MMR and cross-encoder reranking.
+- RAG quality and safety evaluation using DeepEval.
+- Tracing and monitoring using LangSmith.
+- API testing with Pytest.
+- Docker-based application packaging.
+- AWS infrastructure provisioning using CloudFormation.
+- Container image storage in Amazon ECR.
+- Container deployment using Amazon ECS with AWS Fargate.
+- GitHub Actions CI/CD with GitHub OIDC authentication.
+- Runtime configuration and secret injection using AWS Secrets Manager.
+- Application logs in Amazon CloudWatch.
 
-### Step 1: Document Ingestion
+## Technology Stack
 
-Users upload documents through the application.
+| Area | Technologies |
+|---|---|
+| Language | Python |
+| API | FastAPI, Uvicorn |
+| RAG framework | LangChain |
+| LLM | Groq, `openai/gpt-oss-20b` |
+| Embeddings | Hugging Face, `sentence-transformers/all-MiniLM-L6-v2` |
+| Vector store | FAISS |
+| Evaluation | DeepEval |
+| Observability | LangSmith |
+| Testing | Pytest |
+| Containerization | Docker |
+| CI/CD | GitHub Actions |
+| Cloud | AWS |
+| Container registry | Amazon ECR |
+| Container orchestration | Amazon ECS |
+| Compute | AWS Fargate |
+| Infrastructure as Code | AWS CloudFormation |
+| Secrets | AWS Secrets Manager |
+| Logging | Amazon CloudWatch |
 
-Supported document processing includes PDF and DOCX files.
+## RAG Workflow
 
-### Step 2: Text Extraction
+1. The user uploads one or more documents through the application.
+2. The ingestion pipeline extracts and processes document text.
+3. The text is split into chunks.
+4. An embedding model converts chunks into vectors.
+5. The vectors are stored in a FAISS index.
+6. The user submits a question.
+7. The retriever searches for relevant document chunks.
+8. The retrieved context is passed to the LLM with the question.
+9. The application returns an answer based on the available context.
 
-Text is extracted from uploaded documents using document-processing libraries.
+## Evaluation Results
 
-### Step 3: Text Chunking
+The project includes separate evaluations for retrieval, generation, the complete RAG pipeline, and application behavior.
 
-Large documents are divided into smaller chunks to improve retrieval accuracy and maintain relevant context.
+### Recorded evaluation results
 
-The project uses configurable chunk sizes and overlap.
-
-### Step 4: Embedding Generation
-
-Text chunks are converted into numerical vector representations using embedding models.
-
-The project experiments with models such as:
-
-- sentence-transformers/all-MiniLM-L6-v2
-- BAAI/bge-base-en-v1.5
-
-### Step 5: Vector Storage
-
-Generated embeddings are stored in the FAISS vector database.
-
-FAISS enables efficient similarity-based document retrieval.
-
-### Step 6: Information Retrieval
-
-When a user asks a question, the system generates a query embedding and retrieves the most relevant document chunks.
-
-### Step 7: Prompt Construction
-
-The retrieved context and user question are combined into a structured prompt.
-
-### Step 8: Answer Generation
-
-The prompt is passed to the configured LLM, such as Google Gemini or Groq, to generate a context-aware response.
-
-### Step 9: Response Delivery
-
-The generated answer is returned to the user through the FastAPI application.
-
-## 7. Evaluation Framework
-
-A major focus of this project is evaluating the quality and reliability of the RAG application.
-
-Instead of assuming that the application works correctly, the evaluation framework measures its performance using predefined datasets and evaluation metrics.
-
-Evaluation is divided into three levels.
-
-### 7.1 Component-Level Evaluation
-
-Individual RAG components are evaluated independently.
-
-**Retriever Evaluation**
-
-Measures whether the retriever fetches relevant information.
-
-Metrics:
-- Contextual Recall.
-- Contextual Precision.
-
-**Generator Evaluation**
-
-Measures the quality of generated responses.
-
-Metrics:
-- Faithfulness.
-- Answer Relevancy.
-
-### 7.2 Pipeline-Level Evaluation
-
-Evaluates the complete RAG pipeline.
-
-Metrics:
-- Contextual Relevancy.
-- Faithfulness.
-- Answer Relevancy.
-
-### 7.3 Application-Level Evaluation
-
-Evaluates the overall application response quality.
-
-Metrics:
-- Correctness.
-- Completeness.
-- Style.
-- Scope Adherence.
-- PII Leakage.
-- Toxicity.
-
-### 7.4 LLM-as-a-Judge
-
-The project uses a Groq-powered LLM judge to evaluate generated responses.
-
-The judge assesses responses against evaluation criteria and produces scores and feedback.
-
-DeepEval is used to organize and execute evaluation experiments.
-
-### 7.5 Evaluation Results
-
-The following results were obtained during the project's reported evaluation experiments.
-
-| Evaluation Area | Metric | Result |
+| Component | Metric | Recorded result |
 |---|---|---:|
 | Retriever | Contextual Recall | 95% |
 | Retriever | Contextual Precision | 93% |
 | Generator | Faithfulness | 98% |
 | Generator | Answer Relevancy | 98% |
-| Full RAG Pipeline | Contextual Relevancy | 90% |
-| Full RAG Pipeline | Faithfulness | 96% |
-| Full RAG Pipeline | Answer Relevancy | 94% |
+| Full RAG pipeline | Contextual Relevancy | 90% |
+| Full RAG pipeline | Faithfulness | 96% |
+| Full RAG pipeline | Answer Relevancy | 94% |
 | Application | Correctness | 95% |
 | Application | Completeness | 76% |
 | Application | Style | 84% |
-| Safety | Scope Adherence | 96% |
-| Safety | Toxicity Evaluation | 100% |
-| Safety | PII Leakage | 96% |
+| Safety evaluation | Scope adherence | 0.96 |
+| Safety evaluation | PII leakage score | 0.96 |
+| Safety evaluation | Toxicity evaluation | 100% passed |
 
-**Note:** These are experimental results from the project's evaluation runs, not guaranteed production performance. Scores depend on the evaluation dataset, model, judge, and metric configuration.
+A retriever optimization experiment using `BAAI/bge-base-en-v1.5` recorded 0.98 contextual recall and 0.85 contextual precision.
 
-## 8. Retriever Optimization Experiments
+These are recorded project evaluation results, not a guarantee of performance on every dataset or user query. Metric interpretation depends on the metric's scoring definition.
 
-Multiple retrieval configurations were tested to improve retrieval quality.
+### Automated tests
 
-| Experiment | Configuration | Observation |
-|---|---|---|
-| Baseline | MiniLM embeddings | Initial retrieval baseline |
-| Optimization 02 | Cross-Encoder Reranker | Improved document ranking |
-| Optimization 03 | BAAI/bge-base-en-v1.5 | Contextual Recall: 98%, Contextual Precision: 85% |
+Latest recorded test run:
 
-The experiments helped compare embedding quality and retrieval performance.
+```text
+166 passed
+0 failed
+10 warnings
+```
 
-The final retrieval configuration should be selected based on the evaluation results and application requirements.
-
-## 9. Observability and Monitoring
-
-LangSmith is used for tracing and observing LLM application execution.
-
-It helps understand what happens during each RAG request.
-
-Key monitoring areas:
-
-- LLM execution traces.
-- Retriever execution.
-- Response latency.
-- Token usage and cost.
-- Average execution cost.
-- Error analysis.
-- Evaluation performance.
-
-The project also includes latency evaluation using:
-
-- Time to First Token (TTFT).
-- Average latency.
-- P95 latency.
-- P99 latency.
-- Service Level Objectives (SLOs).
-
-LangSmith dashboards and alerts are used to monitor application performance and cost.
-
-## 10. Testing Strategy
-
-Pytest is used to test application components and verify application behavior.
-
-The testing structure includes:
-
-- Unit tests.
-- Integration tests.
-- Configuration tests.
-- Logger tests.
-- Model loader tests.
-- Application-related tests.
-
-Run all tests:
+Run the tests with:
 
 ```bash
 uv run pytest tests/ -v
 ```
 
-Run tests with coverage:
+The warnings were recorded as deprecation warnings from dependencies.
 
-```bash
-uv run pytest tests/ --cov=. --cov-report=term-missing
-```
+## Observability and Monitoring
 
-## 11. Project Structure
+LangSmith is used to trace and inspect RAG pipeline execution.
 
-The project follows a modular architecture to separate application logic, evaluation, configuration, and testing.
+The project dashboard is named:
+
+`Customer_Doubt_Solver_RAG_Project`
+
+The dashboard was configured to inspect:
+- P95 latency.
+- Average cost.
+
+Experimental alert thresholds were configured for:
+- Average cost greater than or equal to $7.
+- Latency greater than or equal to 7 seconds.
+
+These thresholds were used during project testing and should be reviewed before production use.
+
+## Project Structure
+
+The following is the intended high-level structure. Adjust file and folder names if your current repository differs.
 
 ```text
 End-to-End-LLMOPs-Project/
 │
 ├── .github/
 │   └── workflows/
-│       └── ci.yml
-│
-├── multi_doc_chat/
-│   ├── config/
-│   ├── ...
-│
-├── evaluation/
-│   ├── adapters/
-│   ├── component/
-│   ├── pipeline/
-│   ├── application/
-│   ├── judges/
-│   └── ...
-│
-├── tests/
-│   ├── unit/
-│   └── ...
+│       ├── ci.yml
+│       └── deploy.yml
 │
 ├── config/
 ├── data/
-├── faiss_index/
+├── evaluation/
+├── infra/
+│   ├── cloudformation.yml
+│   ├── task-definition.json
+│   └── AWS_DEPLOYMENT_DOCUMENTATION.md
 │
-├── main.py
-├── Dockerfile
+├── multi_doc_chat/
+├── notebook/
+├── static/
+├── templates/
+├── tests/
+│   ├── api/
+│   ├── integration/
+│   ├── regression/
+│   └── unit/
+│
 ├── .dockerignore
-├── .gitignore
 ├── .env.example
-├── requirements.txt
-├── requirements-dev.txt
+├── .gitignore
+├── config.yaml
+├── Dockerfile
+├── main.py
 ├── pyproject.toml
-├── uv.lock
+├── requirements.txt
 └── README.md
 ```
 
-**Note:** This is a representative structure. Adjust it to match the actual folders and files in your repository.
-
-## 12. Installation and Setup
+## Run Locally
 
 ### Prerequisites
 
-Install the following:
+- Python 3.12 (or the version configured by the project).
+- Git.
+- `uv` package manager.
+- Valid provider API credentials.
 
-- Python 3.11
-- Git
-- Docker Desktop
-- uv package manager
-
-### Step 1: Clone the Repository
+### 1. Clone the repository
 
 ```bash
-git clone YOUR_GITHUB_REPOSITORY_URL
-```
-
-Navigate to the project directory:
-
-```bash
+git clone https://github.com/i-am-tushaar/End-to-End-LLMOPs-Project.git
 cd End-to-End-LLMOPs-Project
 ```
 
-### Step 2: Create Virtual Environment
+### 2. Create and configure environment variables
 
-```bash
-uv venv
+Create a local `.env` file using `.env.example` as a reference.
+
+Example variable names:
+
+```env
+GROQ_API_KEY=your_groq_api_key
+LANGCHAIN_API_KEY=your_langsmith_api_key
+LANGCHAIN_TRACING_V2=true
+LANGCHAIN_PROJECT=Customer_Doubt_Solver_RAG_Project
 ```
 
-Activate the environment on Windows:
+Use your own valid credentials. Never commit `.env` or expose API keys in source control, logs, screenshots, or documentation.
+
+### 3. Install dependencies
 
 ```bash
-.venv\Scripts\activate
+uv sync --locked
 ```
 
-### Step 3: Install Dependencies
-
-Install production dependencies:
+### 4. Start the application
 
 ```bash
-uv pip install -r requirements.txt
-```
-
-Install development and evaluation dependencies:
-
-```bash
-uv pip install -r requirements-dev.txt
-```
-
-### Step 4: Configure Environment Variables
-
-Create a `.env` file from the example:
-
-Windows:
-
-```bash
-copy .env.example .env
-```
-
-Add your actual API credentials to `.env`.
-
-Never commit your `.env` file to GitHub.
-
-### Step 5: Run the Application
-
-```bash
-uv run uvicorn main:app --host 0.0.0.0 --port 8080
+uv run uvicorn main:app --host 0.0.0.0 --port 8080 --reload
 ```
 
 Open the API documentation:
@@ -492,170 +285,165 @@ Open the API documentation:
 http://localhost:8080/docs
 ```
 
-## 13. Docker Setup
+## Run with Docker
 
-The project uses Docker to package the application and its dependencies into a portable container.
-
-### Step 1: Build Docker Image
+### 1. Build the image
 
 ```bash
-docker build -t llmops-project .
+docker build -t llmops-rag-app .
 ```
 
-### Step 2: Run Docker Container
+### 2. Run the container
+
+Pass credentials through environment variables or a secure environment file. Do not bake secrets into the Docker image.
 
 ```bash
-docker run -d -p 8080:8080 --env-file .env --name llmops-container llmops-project
+docker run -d \
+  --name llmops-rag-container \
+  -p 8080:8080 \
+  --env-file .env \
+  llmops-rag-app
 ```
 
-### Step 3: Verify Running Container
-
-```bash
-docker ps
-```
-
-### Step 4: View Container Logs
-
-```bash
-docker logs llmops-container
-```
-
-### Step 5: Access Application
+Open:
 
 ```text
 http://localhost:8080/docs
 ```
 
-### Step 6: Stop Container
+## AWS Deployment
 
-```bash
-docker stop llmops-container
-```
+The application is configured for deployment to AWS using Amazon ECR, Amazon ECS, and AWS Fargate.
 
-Remove container:
+### AWS resources
 
-```bash
-docker rm llmops-container
-```
+| Resource | Purpose |
+|---|---|
+| Amazon ECR | Stores the Docker image |
+| Amazon ECS | Manages the application service and task |
+| AWS Fargate | Runs the container without managing EC2 servers |
+| VPC and public subnet | Provide network connectivity |
+| Security group | Controls inbound application traffic |
+| IAM roles | Grant services the permissions they need |
+| AWS Secrets Manager | Stores application credentials |
+| Amazon CloudWatch | Collects container logs |
+| AWS CloudFormation | Creates infrastructure from a template |
 
-**Note:** The Docker image includes the application dependencies. If FAISS indexes, uploaded documents, or other runtime data are stored outside the image, mount or provide those files separately.
+### Recorded deployment configuration
 
-## 14. Continuous Integration (CI)
+| Setting | Value |
+|---|---|
+| AWS Region | `eu-north-1` |
+| ECR repository | `llmopsrepolive` |
+| ECS cluster | `llmops-live-cluster` |
+| ECS service | `llmops-service` |
+| ECS task family | `llmops-task` |
+| Container name | `llmops-container` |
+| Container port | `8080` |
+| Fargate CPU | `1024` (1 vCPU) |
+| Fargate memory | `4096` MiB (4 GB) |
+| CloudWatch log group | `/ecs/llmopstdlive` |
 
-GitHub Actions is used to automate the testing workflow.
+The public IP assigned to a running task can change when the task is replaced. Find the current address in the ECS task's networking details.
 
-The CI workflow is triggered when code is pushed to the main branch or when a pull request targets the main branch.
-
-### CI Workflow
-
-```mermaid
-flowchart TD
-    A[Developer Pushes Code] --> B[GitHub Actions Trigger]
-    B --> C[Checkout Repository]
-    C --> D[Set Up Python]
-    D --> E[Install uv]
-    E --> F[Install Dependencies]
-    F --> G[Run Pytest]
-    G --> H{Tests Passed?}
-    H -->|Yes| I[CI Successful]
-    H -->|No| J[CI Failed]
-```
-
-### Current CI Implementation
-
-- GitHub Actions workflow.
-- Python environment setup.
-- uv dependency installation.
-- Automated Pytest execution.
-- Test result reporting.
-
-Workflow file:
+Application endpoints:
 
 ```text
-.github/workflows/ci.yml
+http://PUBLIC_IP:8080/
+http://PUBLIC_IP:8080/docs
 ```
 
-**Current Status:** Automated Continuous Integration is implemented. Docker image publishing and automated application deployment are planned extensions.
+Replace `PUBLIC_IP` with the current public IPv4 address of the running task. Restrict inbound access to trusted IP addresses where possible.
 
-## 15. Why RAG Instead of Fine-Tuning?
+For the full infrastructure setup, deployment steps, troubleshooting, and cleanup instructions, see:
 
-RAG was selected because the primary objective is to answer questions using external documents.
+[`infra/AWS_DEPLOYMENT_DOCUMENTATION.md`](infra/AWS_DEPLOYMENT_DOCUMENTATION.md)
 
-Key reasons:
+## CI/CD Pipeline
 
-- External documents can be updated without retraining the LLM.
-- Retrieved context helps ground answers in source information.
-- It is suitable for private and domain-specific knowledge.
-- It reduces the need to maintain a separately fine-tuned model for every document collection.
-- It allows retrieval quality to be independently optimized and evaluated.
+GitHub Actions automates testing and deployment.
 
-Fine-tuning is more appropriate when the objective is to change model behavior, style, or task-specific capabilities rather than simply provide access to changing external knowledge.
+### CI workflow
 
-## 16. Challenges and Solutions
+The CI workflow runs on configured pushes and pull requests. It checks out the repository, sets up Python and `uv`, installs dependencies, and runs the test suite.
 
-| Challenge | Solution |
-|---|---|
-| LLM hallucinations | RAG with retrieved document context |
-| Poor retrieval quality | Embedding experiments and reranking |
-| Inaccurate responses | Faithfulness and correctness evaluation |
-| Evaluation complexity | DeepEval and Groq LLM judge |
-| Prompt and data leakage | Prompt hardening and safety evaluation |
-| High response latency | Latency measurement and optimization |
-| Dependency conflicts | Version management and uv |
-| Deployment inconsistencies | Docker containerization |
-| Manual testing | Automated Pytest and GitHub Actions |
+### Deployment workflow
 
-## 17. Future Improvements
+The deployment workflow runs after the CI workflow succeeds on the configured branch. Its main steps are:
 
-Planned improvements include:
+1. Authenticate to AWS using GitHub OIDC.
+2. Build the Docker image.
+3. Authenticate to Amazon ECR.
+4. Tag and push the image to ECR.
+5. Register the updated ECS task definition.
+6. Deploy the new task definition to the ECS service.
+7. Wait for the ECS service deployment to stabilize.
 
-- Automated Docker image publishing.
-- Continuous Deployment (CD).
-- Docker Hub or GitHub Container Registry integration.
-- Cloud deployment using AWS.
-- Kubernetes-based orchestration.
-- Prometheus and Grafana monitoring.
-- Advanced retrieval optimization.
-- Improved application completeness.
-- Automated evaluation in CI/CD.
-- Performance and scalability improvements.
+The GitHub Actions role uses IAM permissions and an OIDC trust policy. This avoids storing long-lived AWS access keys in GitHub.
 
-## 18. Learning Outcomes
+## Security
 
-Through this project, I gained practical experience in:
+- Keep `.env` out of Git.
+- Commit `.env.example` with variable names and placeholder values only.
+- Store production credentials in AWS Secrets Manager.
+- Inject secrets into ECS tasks at runtime.
+- Use IAM roles with least-privilege permissions.
+- Use GitHub OIDC rather than long-lived AWS access keys for CI/CD.
+- Restrict security group ingress to required ports and trusted source IPs.
+- Never print API keys or access tokens in workflow logs.
+- Rotate credentials if they are exposed or suspected to be compromised.
 
-- Designing and developing RAG applications.
-- Working with multiple LLM providers.
-- Building embedding and retrieval pipelines.
-- Optimizing vector search.
-- Evaluating LLM applications.
-- Implementing LLM-as-a-Judge.
-- Measuring hallucinations and response quality.
-- Building observability and monitoring workflows.
-- Writing automated tests.
-- Managing Python dependencies.
-- Containerizing applications using Docker.
-- Implementing CI workflows using GitHub Actions.
+## Cost Considerations
 
-## 19. Conclusion
+AWS resources can incur charges while they exist or are running. In particular, a running Fargate task, public IPv4 address, ECR storage, CloudWatch logs, Secrets Manager secrets, and data transfer may contribute to cost.
 
-This project demonstrates how to move beyond a basic LLM chatbot and build a structured LLMOps application.
+To pause the application's Fargate compute, set the ECS service desired task count to `0`. This does not delete the other resources or guarantee that all AWS charges stop.
 
-It combines RAG development, systematic evaluation, observability, automated testing, dependency management, and Docker containerization into one engineering workflow.
+Review AWS Billing and Cost Explorer regularly. Follow the cleanup steps in the deployment documentation when you no longer need the deployment.
 
-The primary goal is to make LLM-powered applications more reliable, measurable, maintainable, and easier to deploy.
+## Current Status and Known Issue
 
----
+The recorded GitHub Actions deployment completed successfully, and the deployed FastAPI application was reachable through its Swagger documentation endpoint.
 
-## Author
+A runtime issue was also observed: Groq returned `401 Invalid API Key` when the application attempted to generate a chat answer. Document upload and indexing were working, but successful LLM inference was not confirmed at that time.
 
-**Tushar Choudhary**
+Before treating the application as fully operational, verify the Groq credential stored in AWS Secrets Manager, confirm that the ECS task definition references the correct secret, and force a new ECS deployment after updating the secret. Never share the API key itself.
 
-AI Engineer | LLMOps | RAG | Machine Learning
+## Future Improvements
 
-- GitHub: YOUR_GITHUB_PROFILE_URL
-- LinkedIn: https://www.linkedin.com/in/insightsbytushar/
+- Resolve and verify the Groq authentication issue in the deployed environment.
+- Add authentication and authorization for application users.
+- Add HTTPS using a domain and TLS certificate.
+- Add more robust document storage and lifecycle management.
+- Add load testing and performance benchmarks.
+- Review and tune resource sizing and AWS costs.
+- Expand evaluation datasets and regression tests.
+- Add deployment rollback and operational alerting.
 
----
+## What I Learned
 
-**If you find this project useful, consider giving the repository a star!**
+Through this project, I worked across the lifecycle of an LLM application:
+
+- Building a multi-document RAG pipeline.
+- Improving retrieval and evaluating generated answers.
+- Writing automated tests and regression checks.
+- Tracing application execution and monitoring latency and cost.
+- Packaging an application with Docker.
+- Provisioning AWS infrastructure with CloudFormation.
+- Deploying containers to ECS Fargate.
+- Securing GitHub Actions deployment with OIDC and IAM.
+- Managing runtime secrets with AWS Secrets Manager.
+- Collecting application logs with CloudWatch.
+
+## Interview Explanation
+
+"I built an end-to-end LLMOps project around a multi-document RAG application. Users can upload documents, which are processed, embedded, and stored in FAISS. When a user asks a question, the retriever finds relevant chunks and passes the context to a Groq-hosted LLM through LangChain.
+
+I added DeepEval to measure retrieval quality, faithfulness, answer relevancy, and safety-related behavior. I used LangSmith for tracing and monitoring, and Pytest for automated testing.
+
+For deployment, I containerized the application with Docker and provisioned AWS infrastructure using CloudFormation. GitHub Actions runs tests, authenticates to AWS using OIDC, pushes the Docker image to ECR, and deploys it to ECS Fargate. Secrets are stored in AWS Secrets Manager and application logs are sent to CloudWatch."
+
+## Documentation
+
+- [Project repository](https://github.com/i-am-tushaar/End-to-End-LLMOPs-Project)
+- [AWS deployment documentation](infra/AWS_DEPLOYMENT_DOCUMENTATION.md)

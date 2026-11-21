@@ -1,133 +1,248 @@
-// Description: Defines the CI pipeline, including source checkout, dependency installation, automated testing and Docker image building.
-
-
+// ============================================================================
 // FILE: Jenkinsfile
+//
+// PROJECT: End-to-End-LLMOps-Project
+//
 // PURPOSE:
-// Defines the CI pipeline for the End-to-End-LLMOps-Project.
+// Automates Continuous Integration (CI) using Jenkins.
 //
 // PIPELINE STAGES:
-// 1. Checkout source code.
-// 2. Verify required tools.
-// 3. Install Python dependencies.
-// 4. Run automated tests.
-// 5. Build application Docker image.
+// 1. Checkout source code from GitHub.
+// 2. Setup Python 3.12 using uv.
+// 3. Install project dependencies.
+// 4. Run automated tests using pytest.
+// 5. Generate test coverage reports.
+// 6. Publish JUnit test results.
+// 7. Archive test and coverage reports.
 //
-// AWS ECR and ECS deployment will be added in the next phase.
+// TRIGGER:
+// pollSCM checks GitHub every 5 minutes and triggers a build
+// only when it detects new changes.
+//
+// FUTURE SCOPE:
+// Docker image building, AWS ECR and ECS deployment.
+// ============================================================================
 
 pipeline {
 
+    // Execute pipeline on the available Jenkins agent.
     agent any
 
+    // ------------------------------------------------------------------------
+    // ENVIRONMENT VARIABLES
+    // ------------------------------------------------------------------------
+    environment {
+
+        // Python version required for this project.
+        PYTHON_VERSION = '3.12'
+
+        // Project import paths for Python modules.
+        PYTHONPATH = "${WORKSPACE}:${WORKSPACE}/multi_doc_chat"
+
+        // Optional API keys for testing.
+        // Configure actual credentials in Jenkins when required.
+        GROQ_API_KEY = "${env.GROQ_API_KEY ?: ''}"
+        GOOGLE_API_KEY = "${env.GOOGLE_API_KEY ?: ''}"
+
+        // Default LLM provider.
+        LLM_PROVIDER = "${env.LLM_PROVIDER ?: 'groq'}"
+    }
+
+    // ------------------------------------------------------------------------
+    // BUILD TRIGGERS
+    // ------------------------------------------------------------------------
+    triggers {
+
+        // Check the GitHub repository approximately every 5 minutes.
+        //
+        // H/5 means Jenkins distributes the polling schedule across
+        // available minute positions in each 5-minute interval.
+        //
+        // Jenkins starts a build only when it detects new SCM changes.
+        pollSCM('H/5 * * * *')
+    }
+
+    // ------------------------------------------------------------------------
+    // PIPELINE OPTIONS
+    // ------------------------------------------------------------------------
     options {
+
+        // Prevent overlapping builds.
         disableConcurrentBuilds()
+
+        // Retain the latest 10 builds.
         buildDiscarder(logRotator(numToKeepStr: '10'))
+
+        // Display timestamps in console logs.
         timestamps()
     }
 
-    environment {
-        APP_IMAGE = 'llmops-app'
-
-        // Test environment variables.
-        // These are placeholders, not actual API credentials.
-        PYTHONPATH = 'multi_doc_chat'
-        GROQ_API_KEY = 'dummy'
-        GOOGLE_API_KEY = 'dummy'
-        LLM_PROVIDER = 'google'
-    }
-
+    // ------------------------------------------------------------------------
+    // PIPELINE STAGES
+    // ------------------------------------------------------------------------
     stages {
 
-        // STAGE 1: Checkout source code from GitHub.
+        // STAGE 1: CHECKOUT SOURCE CODE
         stage('Checkout') {
             steps {
+                echo 'Checking out source code from GitHub...'
+
+                // Download source code from the configured repository.
                 checkout scm
             }
         }
 
-        // STAGE 2: Verify installed tools.
-        stage('Verify Tools') {
+        // STAGE 2: SETUP PYTHON ENVIRONMENT
+        stage('Setup Python Environment') {
             steps {
+                echo 'Setting up Python 3.12 using uv...'
+
                 sh '''
-                    set -eu
-                    python3 --version
-                    git --version
-                    docker --version
+                    set -e
+
+                    # Install uv, a fast Python package manager.
+                    curl -LsSf https://astral.sh/uv/install.sh | sh
+
+                    UV="$HOME/.local/bin/uv"
+
+                    # Use temporary directories for Python and uv data.
+                    export UV_PYTHON_INSTALL_DIR=/tmp/uv/python
+                    export XDG_DATA_HOME=/tmp/.local/share
+                    export XDG_CACHE_HOME=/tmp/.cache
+
+                    # Install the required Python version.
+                    "$UV" python install ${PYTHON_VERSION}
+
+                    # Create an isolated Python virtual environment.
+                    "$UV" venv \
+                        --python ${PYTHON_VERSION} \
+                        /tmp/venv-${BUILD_NUMBER}
+
+                    # Verify installed versions.
+                    /tmp/venv-${BUILD_NUMBER}/bin/python --version
+                    "$UV" --version
                 '''
             }
         }
 
-        // STAGE 3: Install project dependencies.
+        // STAGE 3: INSTALL PROJECT DEPENDENCIES
         stage('Install Dependencies') {
             steps {
+                echo 'Installing project dependencies...'
+
                 sh '''
-                    set -eu
+                    set -e
 
-                    # Create Python virtual environment.
-                    python3 -m venv .venv
+                    VENV_PY="/tmp/venv-${BUILD_NUMBER}/bin/python"
+                    UV="$HOME/.local/bin/uv"
 
-                    # Activate environment.
-                    . .venv/bin/activate
+                    export UV_PYTHON_INSTALL_DIR=/tmp/uv/python
+                    export XDG_DATA_HOME=/tmp/.local/share
+                    export XDG_CACHE_HOME=/tmp/.cache
 
-                    # Upgrade pip.
-                    python -m pip install --upgrade pip
+                    # Remove local-only and Windows-specific packages
+                    # that are not required in the Linux Jenkins environment.
+                    SAN_REQ=$(mktemp)
 
-                    # Install dependencies.
-                    if [ -f requirements.txt ]; then
-                        python -m pip install -r requirements.txt
-                    elif [ -f pyproject.toml ]; then
-                        python -m pip install .
-                    else
-                        echo "Dependency file not found!"
-                        exit 1
-                    fi
+                    sed -E \
+                        '/^[[:space:]]*llmops-series(==.*)?[[:space:]]*$/d' \
+                        requirements.txt | \
+                    sed -E \
+                        '/^[[:space:]]*pywin32(==.*)?[[:space:]]*$/d' \
+                        > "$SAN_REQ"
+
+                    # Install application dependencies.
+                    "$UV" pip install \
+                        --python "$VENV_PY" \
+                        -r "$SAN_REQ"
+
+                    # Install testing and coverage tools.
+                    "$UV" pip install \
+                        --python "$VENV_PY" \
+                        pytest pytest-cov
+
+                    echo "Dependencies installed successfully."
+                    echo "PYTHONPATH=${PYTHONPATH}"
                 '''
             }
         }
 
-        // STAGE 4: Execute automated tests.
+        // STAGE 4: RUN AUTOMATED TESTS
         stage('Run Tests') {
             steps {
-                sh '''
-                    set -eu
+                echo 'Executing automated tests using pytest...'
 
-                    . .venv/bin/activate
+                script {
 
-                    # Install pytest.
-                    python -m pip install pytest
+                    // Capture the test exit code instead of stopping
+                    // immediately. This allows Jenkins to publish reports
+                    // even when some tests fail.
+                    def testStatus = sh(
+                        script: '''
+                            set -e
 
-                    # Run project tests.
-                    pytest tests -v
-                '''
-            }
-        }
+                            # Activate the Python virtual environment.
+                            . /tmp/venv-${BUILD_NUMBER}/bin/activate
 
-        // STAGE 5: Build application Docker image.
-        stage('Build Docker Image') {
-            steps {
-                sh '''
-                    set -eu
+                            # Create test report directory.
+                            mkdir -p test-results
 
-                    docker build \
-                        -t "${APP_IMAGE}:${BUILD_NUMBER}" \
-                        -t "${APP_IMAGE}:latest" \
-                        .
-                '''
+                            # Run tests and generate coverage reports.
+                            pytest tests/ \
+                                --verbose \
+                                --junit-xml=test-results/results.xml \
+                                --cov=multi_doc_chat \
+                                --cov-report=xml:coverage.xml \
+                                --cov-report=html:htmlcov \
+                                --cov-report=term
+                        ''',
+                        returnStatus: true
+                    )
+
+                    // Publish JUnit test results in Jenkins.
+                    junit(
+                        allowEmptyResults: true,
+                        testResults: 'test-results/*.xml'
+                    )
+
+                    // Archive coverage and test reports.
+                    archiveArtifacts(
+                        artifacts: 'coverage.xml,htmlcov/**,test-results/*.xml',
+                        allowEmptyArchive: true
+                    )
+
+                    // Mark the pipeline as failed if pytest fails.
+                    // Unlike "|| true", this does not hide test failures.
+                    if (testStatus != 0) {
+                        error('Automated tests failed. Check test reports.')
+                    }
+                }
             }
         }
     }
 
+    // ------------------------------------------------------------------------
+    // POST-BUILD ACTIONS
+    // ------------------------------------------------------------------------
     post {
 
         success {
             echo 'CI pipeline completed successfully!'
+            echo 'Test results and coverage reports are available.'
         }
 
         failure {
-            echo 'CI pipeline failed. Check console logs.'
+            echo 'CI pipeline failed!'
+            echo 'Please check the Jenkins Console Output.'
         }
 
         always {
-            echo "Build result: ${currentBuild.currentResult}"
+            echo 'Cleaning temporary Python environment...'
+
+            // Remove the virtual environment created for this build.
+            sh 'rm -rf /tmp/venv-${BUILD_NUMBER} || true'
+
+            echo 'Pipeline execution completed.'
         }
     }
 }

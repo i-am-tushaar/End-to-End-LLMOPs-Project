@@ -1,37 +1,56 @@
 ## Description: Builds the customized Jenkins environment and installs its system dependencies and plugins.
 
 
+# -----------------------------------------------------------------------------
 # FILE: Dockerfile.jenkins
 # PURPOSE:
-# Creates a customized Jenkins image for the LLMOps project.
-# Installs Python, Git, Docker CLI and required Jenkins plugins.
+# Creates a customized Jenkins environment for the LLMOps project.
 #
-# USED BY:
-# docker-compose.jenkins.yml
+# Installs:
+# 1. Python for running application tests.
+# 2. Git for GitHub repository operations.
+# 3. Docker CLI for building application images.
+# 4. Jenkins plugins for Pipeline and GitHub integration.
+# -----------------------------------------------------------------------------
 
 FROM jenkins/jenkins:lts
 
+# Root access is required to install system packages.
 USER root
 
-# Install required system dependencies.
+# Install Python, Git, curl and Docker CLI prerequisites.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         python3 \
         python3-pip \
         python3-venv \
         git \
-        docker.io \
+        curl \
         ca-certificates \
+        gnupg \
+    && install -m 0755 -d /etc/apt/keyrings \
+    && curl -fsSL https://download.docker.com/linux/debian/gpg \
+       -o /etc/apt/keyrings/docker.asc \
+    && chmod a+r /etc/apt/keyrings/docker.asc \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian $(. /etc/os-release && echo "$VERSION_CODENAME") stable" \
+       > /etc/apt/sources.list.d/docker.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends docker-ce-cli \
     && rm -rf /var/lib/apt/lists/*
 
 # Create Python alias.
 RUN ln -s /usr/bin/python3 /usr/local/bin/python
 
+# Verify Docker CLI installation during image build.
+RUN docker --version
+
 # Copy Jenkins plugin configuration.
 COPY jenkins/plugins.txt /usr/share/jenkins/ref/plugins.txt
 
-# Install required Jenkins plugins.
-RUN jenkins-plugin-cli --plugin-file /usr/share/jenkins/ref/plugins.txt
+# Install Jenkins plugins.
+RUN jenkins-plugin-cli \
+    --plugin-file /usr/share/jenkins/ref/plugins.txt
 
 # Root is used for local Docker socket access.
-# Do not expose this Jenkins setup publicly.
+# Do not expose this Jenkins instance publicly.
+

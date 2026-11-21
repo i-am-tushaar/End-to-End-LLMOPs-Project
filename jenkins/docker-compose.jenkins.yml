@@ -1,0 +1,41 @@
+## Description: Defines the Jenkins container, networking, persistent storage and Docker socket connection.
+
+
+# FILE: docker-compose.jenkins.yml
+# PURPOSE:
+# Starts Jenkins using Docker Compose.
+# Exposes Jenkins on localhost:8083.
+# Persists Jenkins data using a Docker volume.
+
+services:
+
+  jenkins:
+
+    # Build customized Jenkins image.
+    build:
+      context: ..
+      dockerfile: jenkins/Dockerfile.jenkins
+
+    image: llmops-jenkins:local
+    container_name: jenkins-local
+
+    # Restart unless manually stopped.
+    restart: unless-stopped
+
+    # Host port : Container port
+    ports:
+      - "8083:8080"
+
+    volumes:
+
+      # Persist Jenkins configuration and data.
+      - jenkins_home:/var/jenkins_home
+
+      # Connect Jenkins to Docker Desktop.
+      - /var/run/docker.sock:/var/run/docker.sock
+
+volumes:
+
+  # Persistent Jenkins storage.
+  jenkins_home:
+            

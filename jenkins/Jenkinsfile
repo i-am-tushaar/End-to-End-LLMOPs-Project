@@ -1,0 +1,133 @@
+// Description: Defines the CI pipeline, including source checkout, dependency installation, automated testing and Docker image building.
+
+
+// FILE: Jenkinsfile
+// PURPOSE:
+// Defines the CI pipeline for the End-to-End-LLMOps-Project.
+//
+// PIPELINE STAGES:
+// 1. Checkout source code.
+// 2. Verify required tools.
+// 3. Install Python dependencies.
+// 4. Run automated tests.
+// 5. Build application Docker image.
+//
+// AWS ECR and ECS deployment will be added in the next phase.
+
+pipeline {
+
+    agent any
+
+    options {
+        disableConcurrentBuilds()
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+        timestamps()
+    }
+
+    environment {
+        APP_IMAGE = 'llmops-app'
+
+        // Test environment variables.
+        // These are placeholders, not actual API credentials.
+        PYTHONPATH = 'multi_doc_chat'
+        GROQ_API_KEY = 'dummy'
+        GOOGLE_API_KEY = 'dummy'
+        LLM_PROVIDER = 'google'
+    }
+
+    stages {
+
+        // STAGE 1: Checkout source code from GitHub.
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        // STAGE 2: Verify installed tools.
+        stage('Verify Tools') {
+            steps {
+                sh '''
+                    set -eu
+                    python3 --version
+                    git --version
+                    docker --version
+                '''
+            }
+        }
+
+        // STAGE 3: Install project dependencies.
+        stage('Install Dependencies') {
+            steps {
+                sh '''
+                    set -eu
+
+                    # Create Python virtual environment.
+                    python3 -m venv .venv
+
+                    # Activate environment.
+                    . .venv/bin/activate
+
+                    # Upgrade pip.
+                    python -m pip install --upgrade pip
+
+                    # Install dependencies.
+                    if [ -f requirements.txt ]; then
+                        python -m pip install -r requirements.txt
+                    elif [ -f pyproject.toml ]; then
+                        python -m pip install .
+                    else
+                        echo "Dependency file not found!"
+                        exit 1
+                    fi
+                '''
+            }
+        }
+
+        // STAGE 4: Execute automated tests.
+        stage('Run Tests') {
+            steps {
+                sh '''
+                    set -eu
+
+                    . .venv/bin/activate
+
+                    # Install pytest.
+                    python -m pip install pytest
+
+                    # Run project tests.
+                    pytest tests -v
+                '''
+            }
+        }
+
+        // STAGE 5: Build application Docker image.
+        stage('Build Docker Image') {
+            steps {
+                sh '''
+                    set -eu
+
+                    docker build \
+                        -t "${APP_IMAGE}:${BUILD_NUMBER}" \
+                        -t "${APP_IMAGE}:latest" \
+                        .
+                '''
+            }
+        }
+    }
+
+    post {
+
+        success {
+            echo 'CI pipeline completed successfully!'
+        }
+
+        failure {
+            echo 'CI pipeline failed. Check console logs.'
+        }
+
+        always {
+            echo "Build result: ${currentBuild.currentResult}"
+        }
+    }
+}

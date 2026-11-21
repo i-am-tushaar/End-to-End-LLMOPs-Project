@@ -1,0 +1,22 @@
+## Description: Lists the Jenkins plugins required for GitHub integration, Pipeline execution and test reporting.
+
+# FILE: plugins.txt
+# PURPOSE:
+# Defines Jenkins plugins that are installed
+# while building the customized Jenkins Docker image.
+
+# Git integration
+git
+
+# Pipeline functionality
+workflow-aggregator
+
+# GitHub integration
+github
+github-branch-source
+
+# Secure credentials management
+credentials-binding
+
+# Test report publishing
+junit

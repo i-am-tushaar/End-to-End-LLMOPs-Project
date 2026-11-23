@@ -50,12 +50,6 @@ pipeline {
 
         PIP_CACHE_DIR = "${WORKSPACE}\\.pip-cache"
         PIP_DISABLE_PIP_VERSION_CHECK = '1'
-    }
-
-    triggers {
-        // Check GitHub about every 10 minutes. Build starts only when new changes are detected.
-        pollSCM('H/10 * * * *')
-    }
 
     // -----------------------------------------------------------------------
     // PIPELINE OPTIONS

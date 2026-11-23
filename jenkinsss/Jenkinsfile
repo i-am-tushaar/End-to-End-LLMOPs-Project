@@ -1,0 +1,133 @@
+// FILE: Jenkinsfile | PROJECT: End-to-End-LLMOps-Project
+// PURPOSE: Jenkins CI. Checkout, setup Python 3.12 with uv, install deps with persistent caching, run pytest, coverage, publish JUnit, archive reports.
+// TRIGGER: pollSCM checks GitHub every 5 minutes and builds only on new changes.
+// FUTURE SCOPE: Docker image build, AWS ECR and ECS deployment.
+
+pipeline {
+    // Run on any available Jenkins agent.
+    agent any
+
+    environment {
+        PYTHON_VERSION = '3.12'
+        PYTHONPATH = "${WORKSPACE}:${WORKSPACE}/multi_doc_chat"  // Project import paths.
+        GROQ_API_KEY = "${env.GROQ_API_KEY ?: ''}"               // Optional API keys for testing.
+        GOOGLE_API_KEY = "${env.GOOGLE_API_KEY ?: ''}"
+        LLM_PROVIDER = "${env.LLM_PROVIDER ?: 'groq'}"           // Default LLM provider.
+    }
+
+    triggers {
+        // Check GitHub about every 5 minutes. Build starts only when new changes are detected.
+        pollSCM('H/5 * * * *')
+    }
+
+    options {
+        disableConcurrentBuilds()                          // Prevent overlapping builds.
+        buildDiscarder(logRotator(numToKeepStr: '10'))     // Keep the latest 10 builds.
+        timestamps()                                       // Timestamps in console logs.
+    }
+
+    stages {
+        // STAGE 1: CHECKOUT SOURCE CODE
+        stage('Checkout') {
+            steps {
+                echo 'Checking out source code from GitHub...'
+                checkout scm
+            }
+        }
+
+        // STAGE 2: SETUP PYTHON ENVIRONMENT
+        stage('Setup Python Environment') {
+            steps {
+                echo 'Setting up Python 3.12 using uv...'
+                sh '''
+                    set -e
+                    # Persistent cache directories.
+                    CACHE_ROOT="${JENKINS_HOME:-$HOME/.jenkins}/.cache"
+                    export UV_CACHE_DIR="$CACHE_ROOT/uv"
+                    export UV_PYTHON_INSTALL_DIR="$CACHE_ROOT/python"
+                    mkdir -p "$UV_CACHE_DIR"
+                    mkdir -p "$UV_PYTHON_INSTALL_DIR"
+                    # Install uv only if it is missing.
+                    UV="$HOME/.local/bin/uv"
+                    if [ ! -x "$UV" ]; then curl -LsSf https://astral.sh/uv/install.sh | sh; fi
+                    # Install Python only if required.
+                    "$UV" python install ${PYTHON_VERSION}
+                    # Create an isolated environment for this build.
+                    "$UV" venv --python ${PYTHON_VERSION} /tmp/venv-${BUILD_NUMBER}
+                    # Verify installed versions.
+                    /tmp/venv-${BUILD_NUMBER}/bin/python --version
+                    "$UV" --version
+                '''
+            }
+        }
+
+        // STAGE 3: INSTALL PROJECT DEPENDENCIES
+        stage('Install Dependencies') {
+            steps {
+                echo 'Installing project dependencies using uv cache...'
+                sh '''
+                    set -e
+                    VENV_PY="/tmp/venv-${BUILD_NUMBER}/bin/python"
+                    UV="$HOME/.local/bin/uv"
+                    # Use the same persistent cache as the setup stage.
+                    CACHE_ROOT="${JENKINS_HOME:-$HOME/.jenkins}/.cache"
+                    export UV_CACHE_DIR="$CACHE_ROOT/uv"
+                    export UV_PYTHON_INSTALL_DIR="$CACHE_ROOT/python"
+                    mkdir -p "$UV_CACHE_DIR"
+                    mkdir -p "$UV_PYTHON_INSTALL_DIR"
+                    # Remove local-only and Windows-specific packages.
+                    SAN_REQ=$(mktemp)
+                    sed -E '/^[[:space:]]*llmops-series(==.*)?[[:space:]]*$/d' requirements.txt | sed -E '/^[[:space:]]*pywin32(==.*)?[[:space:]]*$/d' > "$SAN_REQ"
+                    # Install application dependencies, then testing and coverage tools.
+                    "$UV" pip install --python "$VENV_PY" -r "$SAN_REQ"
+                    "$UV" pip install --python "$VENV_PY" pytest pytest-cov
+                    rm -f "$SAN_REQ"
+                    echo "Dependencies installed successfully."
+                    echo "PYTHONPATH=${PYTHONPATH}"
+                    echo "Persistent uv cache: $UV_CACHE_DIR"
+                '''
+            }
+        }
+
+        // STAGE 4: RUN AUTOMATED TESTS
+        stage('Run Tests') {
+            steps {
+                echo 'Executing automated tests using pytest...'
+                script {
+                    // Capture the test exit code.
+                    def testStatus = sh(
+                        script: '''
+                            set -e
+                            . /tmp/venv-${BUILD_NUMBER}/bin/activate
+                            mkdir -p test-results
+                            pytest tests/ --verbose --junit-xml=test-results/results.xml --cov=multi_doc_chat --cov-report=xml:coverage.xml --cov-report=html:htmlcov --cov-report=term
+                        ''',
+                        returnStatus: true
+                    )
+                    // Publish JUnit results and archive coverage and test reports.
+                    junit(allowEmptyResults: true, testResults: 'test-results/*.xml')
+                    archiveArtifacts(artifacts: 'coverage.xml,htmlcov/**,test-results/*.xml', allowEmptyArchive: true)
+                    // Fail the pipeline if tests fail.
+                    if (testStatus != 0) { error('Automated tests failed. Check test reports.') }
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'CI pipeline completed successfully!'
+            echo 'Test results and coverage reports are available.'
+        }
+        failure {
+            echo 'CI pipeline failed!'
+            echo 'Please check the Jenkins Console Output.'
+        }
+        always {
+            echo 'Cleaning temporary Python environment...'
+            // Remove the virtual environment created for this build.
+            sh 'rm -rf /tmp/venv-${BUILD_NUMBER} || true'
+            echo 'Pipeline execution completed.'
+        }
+    }
+}

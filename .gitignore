@@ -64,3 +64,11 @@ Thumbs.db
 # Local Database
 *.db
 *.sqlite3
+
+# Native Windows Jenkins CI
+.venv/
+.pip-cache/
+test-results/
+.coverage
+coverage.xml
+htmlcov/

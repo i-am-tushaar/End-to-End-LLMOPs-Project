@@ -1,32 +1,32 @@
 
 /*
 ===============================================================================
- FILE NAME   : Jenkinsfile
- PROJECT     : End-to-End-LLMOps-Project
- PIPELINE    : Native Windows Jenkins CI Pipeline
+FILE NAME   : Jenkinsfile
+PROJECT     : End-to-End-LLMOps-Project
+PIPELINE    : Native Windows Jenkins CI Pipeline
 
- PURPOSE:
- This Jenkinsfile defines a Continuous Integration (CI) pipeline for the
- End-to-End LLMOps project using Jenkins installed directly on Windows.
+PURPOSE:
+This Jenkinsfile defines a Continuous Integration (CI) pipeline for the
+End-to-End LLMOps project using Jenkins installed directly on Windows.
 
- WORKFLOW:
- 1. Checkout source code from GitHub.
- 2. Verify Python and Git installations.
- 3. Create or reuse a Python virtual environment.
- 4. Install application and development dependencies.
- 5. Execute automated pytest tests.
- 6. Generate JUnit and code coverage reports.
- 7. Publish test results and archive reports.
+WORKFLOW:
+1. Checkout source code from GitHub.
+2. Verify Python and Git installations.
+3. Create or reuse a Python virtual environment.
+4. Install application and development dependencies.
+5. Execute automated pytest tests.
+6. Generate JUnit and code coverage reports.
+7. Publish test results and archive reports.
 
- ENVIRONMENT:
- - Operating System : Windows
- - Jenkins          : Native Windows installation
- - Python           : 3.12
- - Shell            : Windows Batch (bat)
+ENVIRONMENT:
+- Operating System : Windows
+- Jenkins          : Native Windows installation
+- Python           : 3.12
+- Shell            : Windows Batch (bat)
 
- IMPORTANT:
- This pipeline does not require Docker to execute CI.
- Update PYTHON_EXE if the Python installation path changes.
+IMPORTANT:
+This pipeline does not require Docker to execute CI.
+Update PYTHON_EXE if the Python installation path changes.
 ===============================================================================
 */
 
@@ -50,6 +50,7 @@ pipeline {
 
         PIP_CACHE_DIR = "${WORKSPACE}\\.pip-cache"
         PIP_DISABLE_PIP_VERSION_CHECK = '1'
+    }
 
     // -----------------------------------------------------------------------
     // PIPELINE OPTIONS
@@ -57,7 +58,7 @@ pipeline {
 
     options {
 
-        // Prevent two builds from using the same workspace simultaneously.
+        // Prevent simultaneous builds.
         disableConcurrentBuilds()
 
         // Retain the latest 10 builds.
@@ -291,7 +292,6 @@ pipeline {
         cleanup {
 
             echo 'Pipeline execution completed.'
-
             echo 'Python virtual environment and pip cache are retained.'
         }
     }

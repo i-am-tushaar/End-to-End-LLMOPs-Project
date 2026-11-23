@@ -1,0 +1,304 @@
+
+/*
+===============================================================================
+ FILE NAME   : Jenkinsfile
+ PROJECT     : End-to-End-LLMOps-Project
+ PIPELINE    : Native Windows Jenkins CI Pipeline
+
+ PURPOSE:
+ This Jenkinsfile defines a Continuous Integration (CI) pipeline for the
+ End-to-End LLMOps project using Jenkins installed directly on Windows.
+
+ WORKFLOW:
+ 1. Checkout source code from GitHub.
+ 2. Verify Python and Git installations.
+ 3. Create or reuse a Python virtual environment.
+ 4. Install application and development dependencies.
+ 5. Execute automated pytest tests.
+ 6. Generate JUnit and code coverage reports.
+ 7. Publish test results and archive reports.
+
+ ENVIRONMENT:
+ - Operating System : Windows
+ - Jenkins          : Native Windows installation
+ - Python           : 3.12
+ - Shell            : Windows Batch (bat)
+
+ IMPORTANT:
+ This pipeline does not require Docker to execute CI.
+ Update PYTHON_EXE if the Python installation path changes.
+===============================================================================
+*/
+
+pipeline {
+
+    agent any
+
+    // -----------------------------------------------------------------------
+    // ENVIRONMENT CONFIGURATION
+    // -----------------------------------------------------------------------
+
+    environment {
+
+        PYTHON_EXE = 'C:\\Users\\Lenovo\\AppData\\Local\\Programs\\Python\\Python312\\python.exe'
+
+        PYTHONPATH = "${WORKSPACE};${WORKSPACE}\\multi_doc_chat"
+
+        GROQ_API_KEY = 'dummy'
+        GOOGLE_API_KEY = 'dummy'
+        LLM_PROVIDER = 'google'
+
+        PIP_CACHE_DIR = "${WORKSPACE}\\.pip-cache"
+        PIP_DISABLE_PIP_VERSION_CHECK = '1'
+    }
+
+    triggers {
+        // Check GitHub about every 10 minutes. Build starts only when new changes are detected.
+        pollSCM('H/10 * * * *')
+    }
+
+    // -----------------------------------------------------------------------
+    // PIPELINE OPTIONS
+    // -----------------------------------------------------------------------
+
+    options {
+
+        // Prevent two builds from using the same workspace simultaneously.
+        disableConcurrentBuilds()
+
+        // Retain the latest 10 builds.
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+
+        // Display timestamps in Console Output.
+        timestamps()
+
+        // Checkout is performed explicitly in the Checkout stage.
+        skipDefaultCheckout(true)
+    }
+
+    // -----------------------------------------------------------------------
+    // AUTOMATIC BUILD TRIGGER
+    // -----------------------------------------------------------------------
+
+    triggers {
+
+        // Check the configured Git branch approximately every 10 minutes.
+        pollSCM('H/10 * * * *')
+    }
+
+    // -----------------------------------------------------------------------
+    // PIPELINE STAGES
+    // -----------------------------------------------------------------------
+
+    stages {
+
+        // ================================================================
+        // STAGE 1: CHECKOUT
+        // ================================================================
+
+        stage('Checkout') {
+
+            steps {
+
+                echo 'Checking out source code from GitHub...'
+
+                checkout scm
+            }
+        }
+
+        // ================================================================
+        // STAGE 2: VERIFY ENVIRONMENT
+        // ================================================================
+
+        stage('Verify Environment') {
+
+            steps {
+
+                echo 'Verifying Windows environment...'
+
+                bat '''
+                    echo ========================================
+                    echo Checking Python 3.12
+                    echo ========================================
+
+                    "%PYTHON_EXE%" --version
+
+                    if errorlevel 1 exit /b 1
+
+                    echo.
+                    echo ========================================
+                    echo Checking Git
+                    echo ========================================
+
+                    git --version
+
+                    if errorlevel 1 exit /b 1
+
+                    echo.
+                    echo ========================================
+                    echo Checking Jenkins Account
+                    echo ========================================
+
+                    whoami
+
+                    echo.
+                    echo Environment verification successful.
+                '''
+            }
+        }
+
+        // ================================================================
+        // STAGE 3: SETUP PYTHON ENVIRONMENT
+        // ================================================================
+
+        stage('Setup Python Environment') {
+
+            steps {
+
+                echo 'Creating or reusing Python virtual environment...'
+
+                bat '''
+                    if not exist "%WORKSPACE%\\.venv\\Scripts\\python.exe" (
+
+                        echo Creating Python 3.12 virtual environment...
+
+                        "%PYTHON_EXE%" -m venv "%WORKSPACE%\\.venv"
+
+                        if errorlevel 1 exit /b 1
+
+                    ) else (
+
+                        echo Existing virtual environment found.
+                        echo Reusing the existing environment.
+
+                    )
+
+                    echo.
+                    echo Checking virtual environment Python version...
+
+                    "%WORKSPACE%\\.venv\\Scripts\\python.exe" --version
+
+                    if errorlevel 1 exit /b 1
+
+                    echo Virtual environment setup completed.
+                '''
+            }
+        }
+
+        // ================================================================
+        // STAGE 4: INSTALL DEPENDENCIES
+        // ================================================================
+
+        stage('Install Dependencies') {
+
+            steps {
+
+                echo 'Installing application and development dependencies...'
+
+                bat '''
+                    set "PYTHON=%WORKSPACE%\\.venv\\Scripts\\python.exe"
+
+                    echo ========================================
+                    echo Installing application dependencies
+                    echo ========================================
+
+                    "%PYTHON%" -m pip install -r requirements.txt
+
+                    if errorlevel 1 exit /b 1
+
+                    echo.
+                    echo ========================================
+                    echo Installing development dependencies
+                    echo ========================================
+
+                    "%PYTHON%" -m pip install -r requirements-dev.txt
+
+                    if errorlevel 1 exit /b 1
+
+                    echo.
+                    echo Dependency installation completed.
+                '''
+            }
+        }
+
+        // ================================================================
+        // STAGE 5: RUN AUTOMATED TESTS
+        // ================================================================
+
+        stage('Run Tests') {
+
+            steps {
+
+                echo 'Executing automated pytest test suite...'
+
+                bat '''
+                    set "PYTHON=%WORKSPACE%\\.venv\\Scripts\\python.exe"
+
+                    if not exist test-results mkdir test-results
+
+                    echo ========================================
+                    echo Running Pytest
+                    echo ========================================
+
+                    "%PYTHON%" -m pytest tests/ ^
+                        --verbose ^
+                        --junitxml=test-results/results.xml ^
+                        --cov=multi_doc_chat ^
+                        --cov-report=xml:coverage.xml ^
+                        --cov-report=html:htmlcov ^
+                        --cov-report=term
+
+                    if errorlevel 1 exit /b 1
+
+                    echo.
+                    echo All automated tests passed.
+                '''
+            }
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // POST-BUILD ACTIONS
+    // -----------------------------------------------------------------------
+
+    post {
+
+        always {
+
+            echo 'Publishing test results and archiving reports...'
+
+            junit(
+                allowEmptyResults: true,
+                testResults: 'test-results/*.xml'
+            )
+
+            archiveArtifacts(
+                artifacts: 'coverage.xml,htmlcov/**,test-results/*.xml',
+                allowEmptyArchive: true
+            )
+        }
+
+        success {
+
+            echo '========================================'
+            echo 'WINDOWS JENKINS CI PIPELINE SUCCESSFUL'
+            echo 'All automated tests passed.'
+            echo '========================================'
+        }
+
+        failure {
+
+            echo '========================================'
+            echo 'WINDOWS JENKINS CI PIPELINE FAILED'
+            echo 'Check Console Output for errors.'
+            echo '========================================'
+        }
+
+        cleanup {
+
+            echo 'Pipeline execution completed.'
+
+            echo 'Python virtual environment and pip cache are retained.'
+        }
+    }
+}

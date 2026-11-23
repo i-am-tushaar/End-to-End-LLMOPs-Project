@@ -2,132 +2,46 @@
 
 ## 1. Overview
 
-This document explains how to run the End-to-End-LLMOps-Project Continuous Integration (CI) pipeline using Jenkins installed directly on a Windows PC.
+This guide explains how to run the End-to-End-LLMOps-Project CI pipeline with Jenkins installed directly on Windows. Docker is not needed. Jenkins runs as a Windows service and uses `bat` commands to prepare Python, install dependencies, run tests, and publish reports.
 
-This setup does **not** require Docker to run Jenkins or execute the CI pipeline. Jenkins runs as a Windows service and uses Windows batch commands (`bat`) to prepare Python, install dependencies, run tests, and publish reports.
+Development happens on the branch `feature/jenkins-windows-ci`. `main` stays unchanged until the pipeline is tested and merged through a GitHub Pull Request.
 
-The pipeline is being developed on the Git branch:
+**What the pipeline does:** when Jenkins detects a new commit, it checks out the code, verifies Python and Git, creates or reuses a virtual environment, installs dependencies, runs pytest, generates JUnit and coverage reports, then publishes and archives them.
 
-```text
-feature/jenkins-windows-ci
-```
-
-The `main` branch is kept unchanged until the Windows CI pipeline has been tested successfully and merged through a GitHub Pull Request.
-
-### What the pipeline does
-
-When Jenkins detects a new commit on the configured branch, it:
-
-1. Checks out the source code from GitHub.
-2. Verifies that Python and Git are available.
-3. Creates or reuses a Python virtual environment.
-4. Installs application and development dependencies.
-5. Runs the automated pytest suite.
-6. Generates JUnit and coverage reports.
-7. Publishes the reports in Jenkins and archives the generated files.
-
-### What this pipeline does not do
-
-This is a CI-only pipeline. It does not build a Docker image, push an image to Amazon ECR, deploy the application to Amazon EKS, or deploy the application to any cloud environment. Docker and AWS EKS deployment can be added in a later CI/CD implementation.
-
-## 2. CI workflow
+**What it does not do:** this is CI only. It does not build a Docker image, push to Amazon ECR, or deploy to Amazon EKS or any cloud. Those can be added later.
 
 ```text
-Developer pushes code
-        |
-        v
-GitHub feature branch
-        |
-        v
-Jenkins detects the change
-        |
-        v
-Checkout source code
-        |
-        v
-Verify Python and Git
-        |
-        v
-Create/reuse Python virtual environment
-        |
-        v
-Install project dependencies
-        |
-        v
-Run pytest test suite
-        |
-        v
-Generate JUnit and coverage reports
-        |
-        v
-Publish and archive reports
-        |
-        v
-Jenkins build: SUCCESS or FAILURE
+Push to GitHub feature branch -> Jenkins detects change -> Checkout
+-> Verify Python and Git -> Create/reuse venv -> Install dependencies
+-> Run pytest -> Generate JUnit and coverage reports
+-> Publish and archive reports -> SUCCESS or FAILURE
 ```
 
-## 3. Project structure
-
-The relevant project structure is:
+## 2. Project files
 
 ```text
 End-to-End-LLMOps-Project/
-│
-├── .github/
-│   └── workflows/
-│       └── ci.yml
-│
-├── jenkins/
-│   ├── Jenkinsfile
-│   ├── JENKINS_WINDOWS_CI.md
-│   ├── JENKINS_DOCUMENTATION.md
-│   └── README.md
-│
-├── tests/
-│   ├── unit/
-│   ├── api/
-│   ├── integration/
-│   ├── regression/
-│   └── conftest.py
-│
-├── multi_doc_chat/
-├── evaluation/
-├── config/
-│
-├── requirements.txt
-├── requirements-dev.txt
-├── pyproject.toml
-├── Dockerfile
-├── README.md
-└── .gitignore
+├── .github/workflows/ci.yml
+├── jenkins/            (Jenkinsfile, JENKINS_WINDOWS_CI.md, JENKINS_DOCUMENTATION.md, README.md)
+├── tests/              (unit, api, integration, regression, conftest.py)
+├── multi_doc_chat/  evaluation/  config/
+├── requirements.txt  requirements-dev.txt  pyproject.toml
+├── Dockerfile  README.md  .gitignore
 ```
-
-### Important files
 
 | File | Purpose |
 |---|---|
-| `jenkins/Jenkinsfile` | Defines the executable Jenkins pipeline |
-| `requirements.txt` | Contains application dependencies |
-| `requirements-dev.txt` | Contains development and test dependencies |
-| `tests/` | Contains automated tests |
-| `tests/conftest.py` | Defines shared pytest fixtures and test configuration |
-| `.gitignore` | Excludes virtual environments, caches, and generated reports from Git |
+| `jenkins/Jenkinsfile` | Pipeline definition |
+| `requirements.txt` | Application dependencies |
+| `requirements-dev.txt` | Development and test dependencies |
+| `tests/conftest.py` | Shared pytest fixtures and config |
+| `.gitignore` | Excludes venvs, caches, and generated reports |
 
-The Dockerfile and GitHub Actions workflow are existing project components. This native Windows Jenkins job does not use the Dockerfile.
+The Dockerfile and GitHub Actions workflow already exist. This Jenkins job does not use the Dockerfile.
 
-## 4. Prerequisites
+## 3. Prerequisites
 
-Install and verify the following on the Windows machine:
-
-| Tool | Purpose |
-|---|---|
-| Java | Runtime required by Jenkins |
-| Jenkins | Runs and manages the CI pipeline |
-| Python 3.12 | Runs the project and tests |
-| Git for Windows | Checks out source code from GitHub |
-| PowerShell or Command Prompt | Used to administer and verify the Windows environment |
-
-Useful verification commands:
+Java (for Jenkins), Jenkins, Python 3.12, Git for Windows, and PowerShell or Command Prompt.
 
 ```powershell
 java -version
@@ -135,230 +49,96 @@ python --version
 git --version
 ```
 
-The Jenkins service must be running and accessible in a browser. In the current setup, Jenkins is available at:
+Jenkins should be running at `http://localhost:8080`.
 
-```text
-http://localhost:8080
-```
+## 4. Jenkins service configuration
 
-## 5. Jenkins Windows service configuration
-
-### 5.1 Check the service
-
-Open PowerShell as Administrator:
+Check the service (PowerShell as Administrator):
 
 ```powershell
 Get-Service Jenkins
-```
-
-To inspect the service configuration:
-
-```powershell
 sc.exe qc Jenkins
 ```
 
-In the current setup, Jenkins runs as:
+In this setup Jenkins runs as `LocalSystem`, with workspace `C:\ProgramData\Jenkins\.jenkins\workspace`.
 
-```text
-LocalSystem
-```
-
-The Jenkins service workspace observed during the environment test was:
-
-```text
-C:\ProgramData\Jenkins\.jenkins\workspace
-```
-
-### 5.2 Python version selection
-
-The machine has more than one Python installation. The default `python` command returned Python 3.11.9 in the Jenkins environment test, while the direct Python 3.12 executable returned Python 3.12.10.
-
-For that reason, the current Jenkinsfile explicitly specifies the Python 3.12 executable:
+**Python version:** the machine has several Pythons. In Jenkins, plain `python` returned 3.11.9, while the direct 3.12 executable returned 3.12.10. So the Jenkinsfile sets the full path:
 
 ```text
 C:\Users\Lenovo\AppData\Local\Programs\Python\Python312\python.exe
 ```
 
-This path is machine-specific. A developer using another Windows machine must update `PYTHON_EXE` in the Jenkinsfile to the Python 3.12 executable path on that machine.
+This path is machine specific. On another machine, update `PYTHON_EXE` in the Jenkinsfile. The Jenkins service account must be able to access this Python and the project workspace.
 
-The Jenkins service account must have permission to access the selected Python installation and project workspace. The direct Python executable was successfully tested from a Jenkins job in the current environment.
-
-### 5.3 Verify the environment from Jenkins
-
-A temporary Freestyle job can verify the service environment.
-
-Add the build step **Execute Windows batch command** and run:
+**Verify the environment:** create a temporary Freestyle job with an **Execute Windows batch command** step:
 
 ```bat
-echo Checking Python:
 where python
 python --version
-
-echo Checking Git:
 where git
 git --version
-
-echo Checking Python 3.12 directly:
 "C:\Users\Lenovo\AppData\Local\Programs\Python\Python312\python.exe" --version
-
-echo Checking Jenkins account:
 whoami
 ```
 
-In the current environment test, Jenkins reported:
+In this setup, Git worked, the direct Python 3.12 worked, and the service ran as `nt authority\system`. Keep the job for future troubleshooting.
 
-- Git was available.
-- The direct Python 3.12 executable worked.
-- The service process ran as `nt authority\system`.
-
-The temporary environment-test job can be retained for future troubleshooting.
-
-## 6. Required Jenkins plugins
-
-The following plugins are used or recommended for this pipeline:
+## 5. Required plugins
 
 | Plugin | Purpose |
 |---|---|
 | Pipeline | Creates and runs Pipeline jobs |
-| Git | Connects Jenkins jobs to Git repositories |
-| Git Client | Provides Git operations used by Jenkins |
-| JUnit | Displays JUnit test results |
-| Credentials Binding | Makes stored credentials available to builds when needed |
-| HTML Publisher | Can display HTML coverage reports in Jenkins |
+| Git, Git Client | Git repository access |
+| JUnit | Shows test results |
+| Credentials Binding | Provides stored credentials to builds |
+| HTML Publisher | Optional dedicated HTML report link |
 
-Check installed plugins through **Manage Jenkins → Plugins → Installed plugins**. Install any missing plugins through the Available plugins tab.
+Check under **Manage Jenkins → Plugins → Installed plugins** and install anything missing from Available plugins. The Jenkinsfile uses the `junit` and `archiveArtifacts` steps. Archiving HTML alone does not create a dedicated report view, so use HTML Publisher if you want one.
 
-The Jenkinsfile uses the `junit` and `archiveArtifacts` pipeline steps. The HTML Publisher plugin is useful if you later want a dedicated HTML report link on the build page; archiving HTML files alone does not create that dedicated report view.
+## 6. Jenkinsfile
 
-## 7. Jenkinsfile configuration
+Script Path must be exactly `jenkins/Jenkinsfile`.
 
-The pipeline definition is stored at:
-
-```text
-jenkins/Jenkinsfile
-```
-
-The Jenkins job must use this exact Script Path.
-
-### 7.1 Environment variables
-
-The current Jenkinsfile defines:
+**Environment variables**
 
 | Variable | Purpose |
 |---|---|
 | `PYTHON_EXE` | Full path to the Python 3.12 executable |
-| `PYTHONPATH` | Adds the repository root and `multi_doc_chat` directory to Python's import path |
-| `GROQ_API_KEY` | Dummy value for tests that use mocked model components |
-| `GOOGLE_API_KEY` | Dummy value for tests that use mocked model components |
-| `LLM_PROVIDER` | Selects the Google provider setting used by the test configuration |
-| `PIP_CACHE_DIR` | Stores downloaded pip packages in the Jenkins workspace |
+| `PYTHONPATH` | Adds repo root and `multi_doc_chat` to imports |
+| `GROQ_API_KEY`, `GOOGLE_API_KEY` | Dummy values for tests with mocked models |
+| `LLM_PROVIDER` | Google provider setting used by test config |
+| `PIP_CACHE_DIR` | Keeps downloaded pip packages in the workspace |
 
-The dummy API keys are not real credentials. Tests that make actual calls to external providers must be handled separately and must use securely stored Jenkins credentials.
+The API keys are dummies, not real credentials. Tests that call real providers need Jenkins Credentials.
 
-### 7.2 Pipeline stages
+**Stages**
 
-#### Stage 1: Checkout
+1. **Checkout:** `checkout scm` gets code from the repo and branch set in the job.
+2. **Verify Environment:** runs Python and Git. Fails if either cannot run.
+3. **Setup Python Environment:** creates `.venv` if missing (`python.exe -m venv .venv`). Later builds reuse it while it stays in the workspace.
+4. **Install Dependencies:** `python -m pip install -r requirements.txt`, then `-r requirements-dev.txt`. The pip cache reuses downloaded files, but pip may still check and install on later builds.
+5. **Run Tests:** `python -m pytest tests/ --verbose`, also producing JUnit XML, XML coverage, HTML coverage, and a terminal summary.
 
-```groovy
-checkout scm
-```
+**Post actions:** `always` publishes JUnit and archives coverage and test files. `success` and `failure` print messages. `cleanup` prints a completion message. The venv and pip cache are kept for reuse.
 
-Checks out the source code from the repository and branch configured in the Jenkins job.
+## 7. Create the Jenkins job
 
-#### Stage 2: Verify Environment
-
-Checks Python and Git using Windows batch commands. This stage fails if the required executable cannot be run.
-
-#### Stage 3: Setup Python Environment
-
-Creates a virtual environment if it does not already exist:
-
-```bat
-python.exe -m venv .venv
-```
-
-The environment is located in the Jenkins workspace:
-
-```text
-.venv\Scripts\python.exe
-```
-
-Subsequent builds reuse the environment if it remains available in the workspace.
-
-#### Stage 4: Install Dependencies
-
-Installs application dependencies:
-
-```bat
-python -m pip install -r requirements.txt
-```
-
-Then installs development and test dependencies:
-
-```bat
-python -m pip install -r requirements-dev.txt
-```
-
-The pip cache is configured through `PIP_CACHE_DIR` to reduce repeated package downloads.
-
-Note: pip may still check and install packages on subsequent builds. The cache reuses downloaded package files; it does not guarantee that dependency installation will be skipped.
-
-#### Stage 5: Run Tests
-
-Runs the test suite:
-
-```bat
-python -m pytest tests/ --verbose
-```
-
-The Jenkinsfile also generates JUnit XML results, an XML coverage report, an HTML coverage report, and a terminal coverage summary.
-
-### 7.3 Post-build actions
-
-The `post` section runs after the pipeline stages.
-
-- `always`: Attempts to publish JUnit results and archive coverage and test files.
-- `success`: Displays a success message when the pipeline succeeds.
-- `failure`: Displays a failure message when the pipeline fails.
-- `cleanup`: Displays a completion message.
-
-The virtual environment and pip cache are retained for reuse.
-
-## 8. Create the Jenkins Pipeline job
-
-Open Jenkins:
-
-```text
-http://localhost:8080
-```
-
-Create a new job:
-
-1. Click **New Item**.
-2. Enter the job name `LLMOps-Windows-CI`.
-3. Select **Pipeline**.
-4. Click **OK**.
-
-Under the Pipeline section, select **Pipeline script from SCM**.
-
-Configure the fields:
+1. Open `http://localhost:8080`, click **New Item**, name it `LLMOps-Windows-CI`, choose **Pipeline**, click **OK**.
+2. Under Pipeline, choose **Pipeline script from SCM** and set:
 
 | Setting | Value |
 |---|---|
-| Definition | Pipeline script from SCM |
 | SCM | Git |
 | Repository URL | `https://github.com/i-am-tushaar/End-to-End-LLMOps-Project.git` |
-| Credentials | None, if the repository is public |
+| Credentials | None, if the repo is public |
 | Branch Specifier | `*/feature/jenkins-windows-ci` |
 | Script Path | `jenkins/Jenkinsfile` |
 
-Click **Save**.
+3. Click **Save**.
 
-Important: During development, use the feature branch. Do not configure this test job to build `main` until the new pipeline has been verified and merged.
+During development use the feature branch. Do not point this job at `main` until the pipeline is verified and merged.
 
-## 9. SCM polling and automatic builds
-
-The Jenkinsfile currently uses:
+## 8. SCM polling
 
 ```groovy
 triggers {
@@ -366,280 +146,91 @@ triggers {
 }
 ```
 
-This tells Jenkins to check the configured Git branch approximately every ten minutes.
+Jenkins checks the configured branch about every 10 minutes and schedules a build when it finds a relevant change. Notes:
 
-When Jenkins detects a new commit, it schedules a build.
+- A build does not necessarily start right after a push.
+- Only the configured branch is checked.
+- After changing the trigger in the Jenkinsfile, run the job manually once so Jenkins loads it.
+- For faster builds, set up a GitHub webhook later. Local Jenkins must be reachable by GitHub for that.
 
-Important points:
+## 9. Run and read results
 
-- SCM polling does not necessarily start a build immediately after a push.
-- Jenkins checks the configured branch, not every branch in the repository.
-- A build is normally scheduled only when Jenkins detects a relevant source-control change.
-- After changing a Jenkinsfile trigger, run the job manually once so Jenkins can load the updated pipeline definition.
+Open `LLMOps-Windows-CI`, click **Build Now**, open the new build, and select **Console Output**. Expected stages: Checkout, Verify Environment, Setup Python Environment, Install Dependencies, Run Tests. Success ends with `Finished: SUCCESS`, failure with `Finished: FAILURE`. Read the first relevant error, since later ones are often side effects.
 
-For faster triggering, a GitHub webhook can be configured later. A locally hosted Jenkins instance needs to be reachable by GitHub for a webhook to reach it.
+**Generated files:** `test-results/results.xml`, `coverage.xml`, `htmlcov/index.html`.
 
-## 10. Run the pipeline
+- **JUnit:** the plugin reads `test-results/*.xml` and shows counts and failures on the job and build pages.
+- **Coverage:** `coverage.xml` and `htmlcov/**` are archived. Open the HTML report from build artifacts, or configure HTML Publisher for a dedicated link.
 
-To run the first build:
+## 10. Git workflow
 
-1. Open `LLMOps-Windows-CI`.
-2. Click **Build Now**.
-3. Open the newly created build.
-4. Select **Console Output**.
-5. Follow each stage and inspect any errors.
-
-The expected stages are:
-
-```text
-Checkout
-Verify Environment
-Setup Python Environment
-Install Dependencies
-Run Tests
-```
-
-A successful build should finish with:
-
-```text
-Finished: SUCCESS
-```
-
-If a stage fails, Jenkins displays:
-
-```text
-Finished: FAILURE
-```
-
-Read the first relevant error in Console Output. Later errors may simply be consequences of the first failure.
-
-## 11. Test reports and coverage
-
-The pipeline generates these files in the Jenkins workspace:
-
-```text
-test-results/
-    results.xml
-
-coverage.xml
-
-htmlcov/
-    index.html
-    ...
-```
-
-### JUnit report
-
-The JUnit plugin reads:
-
-```text
-test-results/*.xml
-```
-
-It displays test counts and failures on the Jenkins job and build pages.
-
-### Coverage reports
-
-The pipeline archives:
-
-```text
-coverage.xml
-htmlcov/**
-```
-
-The HTML report can be opened from the archived build artifacts. To display it through a dedicated HTML report link on the Jenkins build page, configure the HTML Publisher plugin in the Jenkinsfile.
-
-## 12. Git branch workflow
-
-All new Windows Jenkins CI work is developed on:
-
-```text
-feature/jenkins-windows-ci
-```
-
-The existing `main` branch is kept unchanged during development.
-
-### 12.1 Check the current branch
+All Windows Jenkins CI work stays on `feature/jenkins-windows-ci`.
 
 ```bash
 git branch
-```
-
-### 12.2 Commit the changes
-
-```bash
 git status
 git add jenkins/Jenkinsfile jenkins/JENKINS_WINDOWS_CI.md .gitignore
 git commit -m "ci: add native Windows Jenkins pipeline documentation"
-```
-
-Adjust the `git add` command if only some of these files have changed.
-
-### 12.3 Push the feature branch
-
-```bash
 git push origin feature/jenkins-windows-ci
 ```
 
-### 12.4 Verify the pipeline
+Adjust `git add` to the files that changed.
 
-Before merging, confirm that:
+**Before merging, confirm:** the job uses the feature branch, checkout works, Python and Git checks pass, dependencies install, tests pass, JUnit results are published, and coverage reports are archived.
 
-- The Jenkins job uses the feature branch.
-- Checkout succeeds.
-- Python and Git verification succeeds.
-- Dependencies install successfully.
-- Automated tests pass.
-- JUnit results are published.
-- Coverage reports are archived.
-
-### 12.5 Merge through a Pull Request
-
-After successful verification:
-
-1. Open the GitHub repository.
-2. Create a Pull Request.
-3. Set the base branch to `main`.
-4. Set the compare branch to `feature/jenkins-windows-ci`.
-5. Review the changes.
-6. Merge the Pull Request.
-7. Update your local main branch:
+**Merge:** open a Pull Request on GitHub with base `main` and compare `feature/jenkins-windows-ci`, review, merge, then:
 
 ```bash
 git switch main
 git pull origin main
 ```
 
-Do not delete the feature branch until the merge has been verified.
+Keep the feature branch until the merge is verified.
 
-## 13. Troubleshooting
+## 11. Troubleshooting
 
-### Python is not recognized
+| Problem | Likely reason | Fix |
+|---|---|---|
+| Python not recognized | The service has a different PATH from your terminal | Verify the full Python 3.12 path and update `PYTHON_EXE`. Test it in a Jenkins job |
+| Git not recognized | Git missing from the service environment | Verify the install and that `C:\Program Files\Git\cmd` is accessible |
+| venv creation fails | Python inaccessible to the service, or no `venv` support | Run the direct Python executable in a Jenkins batch job and read the error |
+| Slow dependency install | Large AI/ML packages | Keep the pip cache, avoid needless version changes, read install logs |
+| Tests fail on API credentials | A test makes a real external call instead of a mock | Inspect the test and fixtures. Dummy keys only for mocked tests. Use Jenkins Credentials for real calls |
+| No automatic build | Wrong branch, trigger, or stale Jenkinsfile | Check the branch specifier, the `pollSCM` trigger, run a manual build to load the latest Jenkinsfile, check GitHub access and the Polling Log |
 
-**Possible reason:** Jenkins runs as a Windows service and may have a different PATH from your interactive terminal.
+## 12. Security and maintenance
 
-**Solution:** Verify the full Python 3.12 path and update `PYTHON_EXE` in the Jenkinsfile. Test the executable from a Jenkins job.
+- Never commit real API keys, passwords, or tokens. Use Jenkins Credentials.
+- Restrict Jenkins service and workspace permissions.
+- Do not expose local Jenkins to the public internet without proper security.
+- Keep dependencies documented and version controlled.
+- Review failed builds and reports, and keep only the build history you need.
 
-### Git is not recognized
-
-**Possible reason:** Git is missing from the environment visible to the Jenkins service.
-
-**Solution:** Verify the Git installation and ensure its `cmd` directory is accessible:
-
-```text
-C:\Program Files\Git\cmd
-```
-
-### Python virtual environment creation fails
-
-**Possible reason:** The Python installation is inaccessible to the Jenkins service or lacks the required `venv` support.
-
-**Solution:** Run the direct Python executable from a Jenkins batch job and inspect the error.
-
-### Dependency installation takes a long time
-
-**Possible reason:** The project includes large AI/ML dependencies, and pip may need to download and install them.
-
-**Solution:** Retain the pip cache, avoid unnecessarily changing dependency versions, and inspect the package installation logs.
-
-### Tests fail because of API credentials
-
-**Possible reason:** A test is making a real external API call instead of using a mock.
-
-**Solution:** Inspect the test and its fixtures. Use dummy credentials only for tests that are genuinely mocked. Store real credentials in Jenkins Credentials if external API tests are intentionally required.
-
-### Jenkins does not automatically trigger a build
-
-Check the job's branch specifier, the `pollSCM` trigger in the Jenkinsfile, whether the latest Jenkinsfile has been loaded by a manual build, whether Jenkins can access GitHub, and the job's Polling Log if available.
-
-## 14. Security and maintenance
-
-- Do not commit real API keys, passwords, or access tokens.
-- Use Jenkins Credentials for real secrets.
-- Keep the Jenkins service and workspace permissions appropriately restricted.
-- Do not expose a local Jenkins instance directly to the public internet without proper security controls.
-- Keep application and development dependencies documented and version-controlled.
-- Review generated test reports and failed builds.
-- Retain only the build history needed for debugging and audit purposes.
-
-## 15. Future scope: Docker and AWS EKS
-
-The current pipeline is limited to native Windows CI.
-
-The planned future deployment workflow is:
+## 13. Future scope: Docker and AWS EKS
 
 ```text
-GitHub
-   |
-   v
-Jenkins CI
-   |
-   v
-Run automated tests
-   |
-   v
-Build application Docker image
-   |
-   v
-Push image to Amazon ECR
-   |
-   v
-Deploy image to Amazon EKS
-   |
-   v
-Application running in Kubernetes
+GitHub -> Jenkins CI -> Run tests -> Build Docker image
+-> Push to Amazon ECR -> Deploy to Amazon EKS -> App running in Kubernetes
 ```
 
-Building the application Docker image will provide a consistent Python runtime for the application across different machines. It does not automatically remove the machine-specific Python path from this native Windows Jenkinsfile. That path can later be eliminated by running CI tests in a standardized environment, such as a Python Docker container.
+A Docker image gives a consistent Python runtime across machines, but it does not remove the machine specific Python path from this native Windows Jenkinsfile. That path can go away later by running CI tests in a standard Python Docker container.
 
-## 16. Quick reference commands
-
-### Check Jenkins service
+## 14. Quick reference
 
 ```powershell
-Get-Service Jenkins
+Get-Service Jenkins       # check service
+Restart-Service Jenkins   # restart
+python --version          # check Python
+git --version             # check Git
 ```
-
-### Restart Jenkins
-
-```powershell
-Restart-Service Jenkins
-```
-
-### Check Python
-
-```powershell
-python --version
-```
-
-### Check Git
-
-```powershell
-git --version
-```
-
-### Check current Git branch
 
 ```bash
-git branch
+git branch                                  # current branch
+git push origin feature/jenkins-windows-ci  # push feature branch
 ```
 
-### Push feature branch
+Jenkins URL: `http://localhost:8080`
 
-```bash
-git push origin feature/jenkins-windows-ci
-```
+## Summary
 
-### Open Jenkins
-
-```text
-http://localhost:8080
-```
-
-## Final summary
-
-This native Windows Jenkins CI pipeline automates source-code checkout, Python environment setup, dependency installation, automated testing, and report publishing.
-
-It is developed independently on `feature/jenkins-windows-ci` so that the existing `main` branch remains unchanged until the new pipeline is tested and merged.
-
-Docker image creation and AWS EKS deployment are separate future stages and are not part of this current CI implementation.
+This pipeline automates checkout, Python setup, dependency install, testing, and report publishing on native Windows. It is developed on `feature/jenkins-windows-ci` so `main` stays unchanged until it is tested and merged. Docker image creation and AWS EKS deployment are future stages, not part of this CI.

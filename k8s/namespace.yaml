@@ -1,0 +1,25 @@
+
+# ==========================================================
+# FILE: namespace.yaml
+# ==========================================================
+# DESCRIPTION:
+# A Namespace is a logical separation inside a Kubernetes
+# cluster. It helps organize and manage application resources.
+#
+# WHY DO WE NEED IT?
+# We are creating a dedicated namespace named "llmops"
+# to keep all resources of our LLMOps application together.
+#
+# Other resources such as Deployment, Service and ConfigMap
+# will be created inside this namespace.
+# ==========================================================
+
+# Kubernetes API version used for Namespace
+apiVersion: v1
+
+# Tells Kubernetes to create a Namespace
+kind: Namespace
+
+# Basic information about the Namespace
+metadata:
+  name: llmops  # Name of our application namespace

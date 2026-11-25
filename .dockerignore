@@ -46,3 +46,24 @@ dist/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Private keys and certificates
+*.key
+*.pem
+*.p12
+*.pfx
+*.csr
+
+# AWS credentials
+.aws/
+
+# Additional Python cache
+.mypy_cache/
+.ruff_cache/
+
+# Docker and Kubernetes temporary files
+*.tar
+*.zip
+
+# Existing FAISS session indexes
+faiss_index/

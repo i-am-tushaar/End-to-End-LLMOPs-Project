@@ -1,0 +1,52 @@
+
+# ==========================================================
+# FILE: service.yaml
+# ==========================================================
+# DESCRIPTION:
+# A Kubernetes Service provides a stable network endpoint
+# for accessing application Pods inside a Kubernetes cluster.
+#
+# WHY DO WE NEED IT?
+# Pods can be created, deleted or replaced, and their IP
+# addresses may change. A Service provides a stable address
+# to communicate with the application.
+#
+# WHAT DOES THIS FILE CONFIGURE?
+# 1. Service name and namespace.
+# 2. ClusterIP service type.
+# 3. Pod selection using labels.
+# 4. Service and application communication ports.
+#
+# WHY CLUSTERIP?
+# It exposes the application internally within the cluster.
+# It avoids creating an AWS Load Balancer, helping reduce
+# deployment costs.
+#
+# ACCESS:
+# Use kubectl port-forward for temporary external access
+# during testing.
+# ==========================================================
+
+# Kubernetes API version used for Services
+apiVersion: v1
+
+# Tells Kubernetes to create a Service
+kind: Service
+
+# Basic information about the Service
+metadata:
+  name: llmops-service       # Name of the Service
+  namespace: llmops          # Namespace where the Service is created
+
+# Service configuration
+spec:
+  type: ClusterIP            # Exposes the application internally within the cluster
+
+  selector:
+    app: llmops-app          # Selects Pods with this matching label
+
+  # Defines communication ports
+  ports:
+    - protocol: TCP          # Communication protocol
+      port: 80               # Service port
+      targetPort: 8080       # Application container port

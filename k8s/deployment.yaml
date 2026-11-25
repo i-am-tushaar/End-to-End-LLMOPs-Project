@@ -1,0 +1,99 @@
+
+# ==========================================================
+# FILE: deployment.yaml
+# ==========================================================
+# DESCRIPTION:
+# A Kubernetes Deployment manages the lifecycle of application
+# Pods. It defines which Docker image to run, how many replicas
+# to maintain, resource requirements, and container settings.
+#
+# WHY DO WE NEED IT?
+# It ensures that the application runs continuously inside
+# Kubernetes. If a Pod crashes, Kubernetes creates a new one.
+#
+# WHAT DOES THIS FILE CONFIGURE?
+# 1. Application image from Amazon ECR.
+# 2. Number of application replicas.
+# 3. CPU and memory requests and limits.
+# 4. ConfigMap and Secret environment variables.
+# 5. Container port.
+# 6. Startup and readiness health checks.
+#
+# DEPLOYMENT TARGET:
+# Amazon EKS (Elastic Kubernetes Service)
+# ==========================================================
+
+# Kubernetes API version used for Deployments
+apiVersion: apps/v1
+
+# Tells Kubernetes to create a Deployment
+kind: Deployment
+
+# Basic information about the Deployment
+metadata:
+  name: llmops-app             # Name of the Deployment
+  namespace: llmops            # Namespace where the Deployment is created
+
+# Desired configuration of the Deployment
+spec:
+  replicas: 1                  # Maintain one application Pod
+
+  # Identifies which Pods this Deployment manages
+  selector:
+    matchLabels:
+      app: llmops-app          # Matches Pods with this label
+
+  # Template used to create application Pods
+  template:
+    metadata:
+      labels:
+        app: llmops-app        # Assigns this label to application Pods
+
+    spec:
+      containers:
+        - name: llmops-container  # Name of the application container
+
+          # Docker image stored in Amazon Elastic Container Registry
+          image: 452975373208.dkr.ecr.eu-north-1.amazonaws.com/end-to-end-llmops:v1
+
+          imagePullPolicy: Always  # Always check ECR for the specified image tag
+
+          # Port on which the FastAPI application runs
+          ports:
+            - containerPort: 8080  # Application container port
+              protocol: TCP        # Communication protocol
+
+          # Load environment variables from ConfigMap and Secret
+          envFrom:
+            # Load non-sensitive application configuration
+            - configMapRef:
+                name: llmops-config  # Name of the ConfigMap
+
+            # Load sensitive credentials such as API keys
+            - secretRef:
+                name: llmops-secrets # Name of the Kubernetes Secret
+
+          # Define CPU and memory requirements
+          resources:
+            requests:
+              cpu: "500m"          # Minimum CPU requested (0.5 CPU core)
+              memory: "2Gi"        # Minimum memory requested (2 GiB)
+            limits:
+              cpu: "1"             # Maximum CPU allowed (1 CPU core)
+              memory: "4Gi"        # Maximum memory allowed (4 GiB)
+
+          # Check whether the application has started successfully
+          startupProbe:
+            httpGet:
+              path: /health        # Health-check API endpoint
+              port: 8080           # Port used for the health check
+            periodSeconds: 10      # Check every 10 seconds
+            failureThreshold: 30   # Allow up to 30 failed checks
+
+          # Check whether the application is ready to receive traffic
+          readinessProbe:
+            httpGet:
+              path: /health        # Health-check API endpoint
+              port: 8080           # Port used for the health check
+            periodSeconds: 10      # Check every 10 seconds
+            failureThreshold: 3    # Mark Pod not ready after 3 failures

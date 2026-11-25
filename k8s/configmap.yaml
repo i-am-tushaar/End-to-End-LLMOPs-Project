@@ -1,0 +1,47 @@
+
+# ==========================================================
+# FILE: configmap.yaml
+# ==========================================================
+# DESCRIPTION:
+# Stores non-sensitive application configuration.
+#
+# WHY DO WE NEED IT?
+# Keeps application settings separate from application code.
+# Kubernetes makes these settings available to the container.
+#
+# WHAT DOES THIS FILE CONFIGURE?
+# 1. Application environment.
+# 2. LLM and embedding providers.
+# 3. Vector database settings.
+# 4. LangSmith tracing settings.
+# 5. Application host and port.
+#
+# NOTE:
+# API keys must be stored in Kubernetes Secrets,
+# not in this ConfigMap.
+# ==========================================================
+
+apiVersion: v1                         # Kubernetes API version
+kind: ConfigMap                        # Creates a ConfigMap resource
+
+metadata:
+  name: llmops-config                  # Name of the ConfigMap
+  namespace: llmops                    # Kubernetes namespace
+
+data:
+  APP_NAME: "End-to-End-LLMOps-Project" # Application name
+  APP_ENV: "production"                # Runs application in production mode
+  DEBUG: "False"                       # Disables debug mode
+
+  LLM_PROVIDER: "groq"                 # Selects Groq as the LLM provider
+  EMBEDDING_PROVIDER: "huggingface"    # Selects Hugging Face for embeddings
+
+  VECTOR_STORE: "faiss"                # Vector database used by the application
+  FAISS_INDEX_PATH: "faiss_index"      # Directory for FAISS index files
+
+  LANGCHAIN_TRACING_V2: "true"         # Enables LangSmith tracing
+  LANGCHAIN_PROJECT: "End-to-End-LLMOps-Project" # LangSmith project name
+  LANGCHAIN_ENDPOINT: "https://api.smith.langchain.com" # LangSmith API endpoint
+
+  HOST: "0.0.0.0"                      # Allows the app to listen on all interfaces
+  PORT: "8080"                         # Application listening port

@@ -1,0 +1,87 @@
+
+# ==========================================================
+# FILE: cluster.yaml
+# PROJECT: End-to-End-LLMOps-Project
+# ==========================================================
+# DESCRIPTION:
+# This file defines the infrastructure configuration required
+# to create an Amazon Elastic Kubernetes Service (EKS) cluster
+# using the eksctl command-line tool.
+#
+# WHY DO WE NEED IT?
+# EKS provides a managed Kubernetes control plane on AWS.
+# This configuration tells eksctl how to create the cluster,
+# configure networking, and provision worker nodes.
+#
+# WHAT DOES THIS FILE CONFIGURE?
+# 1. EKS cluster name and Kubernetes version.
+# 2. AWS region where the cluster will be created.
+# 3. Public and private Kubernetes API access.
+# 4. Restricted API access using the user's public IP.
+# 5. Managed EC2 worker node group.
+# 6. Worker node instance type and capacity.
+# 7. EBS storage for worker nodes.
+# 8. VPC networking without a NAT Gateway.
+#
+# COST CONTROL:
+# - One t3.large worker node.
+# - No NAT Gateway.
+# - No public Load Balancer.
+# - One worker node only.
+#
+# IMPORTANT:
+# This file only defines the infrastructure configuration.
+# AWS resources will be created only when the eksctl
+# cluster creation command is executed.
+# ==========================================================
+
+apiVersion: eksctl.io/v1alpha5       # eksctl configuration API version
+kind: ClusterConfig                  # Defines an EKS cluster configuration
+
+# ----------------------------------------------------------
+# CLUSTER INFORMATION
+# ----------------------------------------------------------
+metadata:
+  name: llmops-eks-cluster           # Name of the EKS cluster
+  region: eu-north-1                 # AWS region (Europe - Stockholm)
+  version: "1.37"                    # Kubernetes version
+
+  tags:
+    Project: End-to-End-LLMOps       # Identifies project resources
+    Environment: Demo                # Identifies deployment environment
+    ManagedBy: eksctl                # Identifies infrastructure management tool
+
+# ----------------------------------------------------------
+# VPC AND NETWORK CONFIGURATION
+# ----------------------------------------------------------
+vpc:
+  nat:
+    gateway: Disable                 # Disables NAT Gateway to avoid its charges
+
+  clusterEndpoints:
+    publicAccess: true               # Allows access through the public API endpoint
+    privateAccess: true              # Allows access from inside the VPC
+
+  publicAccessCIDRs:
+    - "183.82.162.191/32"            # Restricts public API access to your current IP
+
+# ----------------------------------------------------------
+# MANAGED WORKER NODE GROUP
+# ----------------------------------------------------------
+managedNodeGroups:
+  - name: llmops-worker-nodes        # Name of the managed worker node group
+
+    instanceType: t3.large           # EC2 instance with 2 vCPUs and 8 GiB RAM
+
+    desiredCapacity: 1               # Number of worker nodes to create
+    minSize: 1                       # Minimum number of worker nodes
+    maxSize: 1                       # Maximum number of worker nodes
+
+    volumeSize: 30                   # Worker node root disk size in GiB
+    volumeType: gp3                  # General Purpose SSD storage type
+
+    privateNetworking: false         # Places worker nodes in public subnets
+
+    labels:
+      role: application              # Identifies application worker nodes
+      project: llmops                # Identifies project worker nodes

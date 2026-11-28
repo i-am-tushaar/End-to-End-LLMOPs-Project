@@ -14,11 +14,11 @@ PIPELINE STAGES:
 4. AWS Authentication       - Verify AWS identity.
 5. Docker Build              - Build Docker image.
 6. Image Validation          - Verify Docker image.
-7. ECR Login                 - Authenticate with Amazon ECR.
+7. ECR Authentication       - Generate ECR authentication config.
 8. Push Image to ECR         - Upload Docker image.
 9. Configure EKS             - Configure kubectl.
 10. Verify Kubernetes        - Check cluster connection.
-11. Deploy to EKS            - Deploy application.
+11. Deploy to EKS             - Deploy application.
 12. Verify Deployment        - Verify application rollout.
 
 IMPORTANT:
@@ -26,9 +26,10 @@ IMPORTANT:
 - Jenkins runs natively on Windows.
 - AWS authentication uses the jenkins-eks profile.
 - IAM Roles Anywhere must be configured.
-- Kubernetes Secret must contain actual credentials.
+- Kubernetes Secret must already contain actual credentials.
 - This pipeline does not create AWS infrastructure.
-- Docker ECR credentials use a temporary isolated config.
+- ECR authentication avoids the Windows Docker credential helper.
+- Temporary ECR credentials are deleted after the build.
 
 ==============================================================
 */
@@ -43,9 +44,9 @@ pipeline {
     agent any
 
     options {
-        timestamps()
-        disableConcurrentBuilds()
-        skipDefaultCheckout(true)
+        timestamps()                         // Display timestamps in console.
+        disableConcurrentBuilds()             // Prevent simultaneous builds.
+        skipDefaultCheckout(true)             // Use explicit Git checkout.
     }
 
     environment {
@@ -219,27 +220,34 @@ pipeline {
 
 
         // ----------------------------------------------------
-        // STAGE 7: LOGIN TO AMAZON ECR
+        // STAGE 7: GENERATE ECR AUTHENTICATION CONFIGURATION
         // ----------------------------------------------------
 
-        stage('ECR Login') {
+        stage('ECR Authentication') {
             steps {
 
                 bat '''
 
-                    REM Create an isolated Docker configuration directory
-                    REM This avoids the existing Windows credential helper
+                    REM Create a temporary Docker configuration directory
 
                     if not exist "%WORKSPACE%\\.docker-config" mkdir "%WORKSPACE%\\.docker-config"
 
-                    REM Create a clean Docker configuration without a credential helper
+                    REM Retrieve ECR authentication password from AWS
 
-                    > "%WORKSPACE%\\.docker-config\\config.json" echo {"auths":{}}
+                    aws --profile jenkins-eks ecr get-login-password --region eu-north-1 > "%WORKSPACE%\\ecr-password.txt"
 
-                    REM Authenticate Docker with Amazon ECR
-                    REM Use the isolated configuration for this login
+                    REM Stop pipeline if AWS authentication fails
 
-                    aws --profile jenkins-eks ecr get-login-password --region eu-north-1 | docker --config "%WORKSPACE%\\.docker-config" login --username AWS --password-stdin %ECR_REGISTRY%
+                    if errorlevel 1 exit /b 1
+
+                    REM Generate Docker authentication configuration using PowerShell
+                    REM This avoids docker login and the Windows credential helper
+
+                    powershell -NoProfile -ExecutionPolicy Bypass -Command "$password = (Get-Content -Raw '%WORKSPACE%\\ecr-password.txt').Trim(); $auth = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes('AWS:' + $password)); $config = @{ auths = @{ '%ECR_REGISTRY%' = @{ auth = $auth } } }; $config | ConvertTo-Json -Depth 5 | Set-Content -Path '%WORKSPACE%\\.docker-config\\config.json' -Encoding ASCII"
+
+                    REM Stop pipeline if configuration generation fails
+
+                    if errorlevel 1 exit /b 1
 
                 '''
             }
@@ -255,8 +263,7 @@ pipeline {
 
                 bat '''
 
-                    REM Push the same image tag generated in Stage 5
-                    REM Reuse the isolated Docker configuration from Stage 7
+                    REM Push Docker image using the generated authentication config
 
                     docker --config "%WORKSPACE%\\.docker-config" push %ECR_REGISTRY%/%ECR_REPOSITORY%:build-%BUILD_NUMBER%
 
@@ -276,7 +283,7 @@ pipeline {
 
                     REM Configure kubectl to communicate with the EKS cluster
 
-                    aws eks update-kubeconfig --region eu-north-1 --name llmops-eks-cluster --profile jenkins-eks
+                    aws --profile jenkins-eks eks update-kubeconfig --region eu-north-1 --name llmops-eks-cluster
 
                 '''
             }
@@ -292,7 +299,7 @@ pipeline {
 
                 bat '''
 
-                    REM Verify that the Kubernetes worker nodes are accessible
+                    REM Verify that Kubernetes worker nodes are accessible
 
                     kubectl get nodes
 
@@ -326,13 +333,7 @@ pipeline {
 
                     kubectl apply -f k8s/service.yaml
 
-                '''
-
-
-                bat '''
-
-                    REM Update the application Deployment with the new ECR image
-                    REM Use the same Jenkins build number used in Docker Build
+                    REM Update Deployment with the newly pushed ECR image
 
                     kubectl set image deployment/llmops-app llmops-container=%ECR_REGISTRY%/%ECR_REPOSITORY%:build-%BUILD_NUMBER% -n llmops
 
@@ -352,12 +353,7 @@ pipeline {
 
                     REM Wait until the application rollout succeeds
 
-                    kubectl rollout status deployment/llmops-app --namespace=llmops --timeout=300s
-
-                '''
-
-
-                bat '''
+                    kubectl rollout status deployment/llmops-app -n llmops --timeout=300s
 
                     REM Display application Pods
 
@@ -395,11 +391,12 @@ pipeline {
 
             echo 'Jenkins pipeline execution finished.'
 
-            // Remove temporary Docker credentials after execution
-            // This runs after both successful and failed builds.
+            // Remove temporary Docker authentication configuration.
 
             bat '''
                 if exist "%WORKSPACE%\\.docker-config" rmdir /s /q "%WORKSPACE%\\.docker-config"
+
+                if exist "%WORKSPACE%\\ecr-password.txt" del /q "%WORKSPACE%\\ecr-password.txt"
             '''
         }
     }

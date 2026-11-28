@@ -118,12 +118,23 @@ pipeline {
             }
         }
 
+
         // STAGE 3: RUN PROJECT TESTS
+        // Install project dependencies and execute automated tests.
 
         stage('Run Tests') {
             steps {
-                uv sync --frozen    
-                uv run --no-sync python -m pytest tests -v   // Execute project tests
+                bat '''
+
+                    REM Install project dependencies using pyproject.toml and uv.lock
+                    REM --frozen prevents modifications to the lock file
+                    uv sync --frozen
+
+                    REM Execute project tests using the project's virtual environment
+                    REM --no-sync prevents dependency synchronization again
+                    uv run --no-sync python -m pytest tests -v
+
+                '''
             }
         }
 

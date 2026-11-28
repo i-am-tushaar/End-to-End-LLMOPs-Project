@@ -21,10 +21,15 @@
 pipeline {
     agent any                         // Run the pipeline on any available Jenkins agent.
 
+
     environment {
-        UV_EXE = 'C:\\Users\\Lenovo\\.local\\bin\\uv.exe' // Path to UV executable.
-        AWS_PROFILE = 'jenkins-eks'                      // AWS profile configured for Jenkins SYSTEM.
-        AWS_REGION = 'eu-north-1'                        // AWS region containing the ECR repository.
+         UV_EXE = 'C:\\Users\\Lenovo\\.local\\bin\\uv.exe' // Path to the UV executable.
+
+        AWS_PROFILE = 'jenkins-eks' // AWS profile configured for Jenkins using IAM Roles Anywhere.
+
+        AWS_REGION = 'eu-north-1' // AWS region where the ECR repository is hosted.
+
+        DOCKER_HOST = 'npipe:////./pipe/dockerDesktopLinuxEngine' // Connect Jenkins to Docker Desktop's Linux Engine.
     }
 
     stages {

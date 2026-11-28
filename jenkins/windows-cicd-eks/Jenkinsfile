@@ -147,19 +147,28 @@ pipeline {
         }
 
         // STAGE 5: BUILD DOCKER IMAGE
+        // Generate a unique image tag using the Git commit ID and build the Docker image.
 
         stage('Docker Build') {
             steps {
                 script {
+
+                    // Get the short Git commit ID (12 characters)
+                    // Use @echo off to prevent the CMD command from appearing in output
                     env.IMAGE_TAG = bat(
-                        script: 'git rev-parse --short=12 HEAD',
+                        script: '@echo off & git rev-parse --short=12 HEAD',
                         returnStdout: true
-                    ).trim()                         // Generate Git commit image tag
+                    ).trim()
+
+                    // Display the generated image tag
+                    echo "Docker Image Tag: ${env.IMAGE_TAG}"
+
                 }
 
+                // Build Docker image using the generated Git commit tag
                 bat '''
                     docker build -t %ECR_REGISTRY%/%ECR_REPOSITORY%:%IMAGE_TAG% .
-                '''                                  // Build Docker image
+                '''
             }
         }
 

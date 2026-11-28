@@ -61,6 +61,15 @@ pipeline {
             }
         }
 
+        stage('Check Docker Engine') {
+              steps {
+                   bat '''
+                     docker info
+                     rem Verify communication with the Docker Engine.
+              '''
+             }
+        }
+
         stage('Check AWS CLI') {
             steps {
                 bat '''

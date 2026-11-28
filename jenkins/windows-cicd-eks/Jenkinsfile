@@ -47,17 +47,52 @@ pipeline {
 
     environment {
 
-        AWS_REGION = 'eu-north-1'                  // AWS region
-        AWS_PROFILE = 'jenkins-eks'                // AWS CLI profile
-        ECR_REGISTRY = '452975373208.dkr.ecr.eu-north-1.amazonaws.com' // ECR registry
-        ECR_REPOSITORY = 'end-to-end-llmops'       // ECR repository
-        EKS_CLUSTER_NAME = 'llmops-eks-cluster'    // EKS cluster name
-        K8S_NAMESPACE = 'llmops'                   // Kubernetes namespace
-        IMAGE_TAG = ''                             // Git commit image tag
-        PYTHONPATH = 'multi_doc_chat'              // Python module path
-        GROQ_API_KEY = 'dummy'                     // Dummy key for CI tests
-        GOOGLE_API_KEY = 'dummy'                   // Dummy key for CI tests
-        LLM_PROVIDER = 'google'                    // LLM provider for CI tests
+        // AWS CONFIGURATION
+
+        AWS_REGION = 'eu-north-1' 
+        // AWS region where your ECR repository and EKS cluster exist
+
+        AWS_PROFILE = 'jenkins-eks'
+        // AWS CLI profile configured with IAM Roles Anywhere authentication
+
+        AWS_CONFIG_FILE = 'C:\\Windows\\System32\\config\\systemprofile\\.aws\\config'
+        // AWS configuration file accessible to Jenkins running as LocalSystem
+
+        ECR_REGISTRY = '452975373208.dkr.ecr.eu-north-1.amazonaws.com'
+        // Amazon ECR registry URL where Docker images are stored
+
+        ECR_REPOSITORY = 'end-to-end-llmops'
+        // Name of the ECR repository
+
+        EKS_CLUSTER_NAME = 'llmops-eks-cluster'
+        // Name of the Amazon EKS Kubernetes cluster
+
+        K8S_NAMESPACE = 'llmops'
+        // Kubernetes namespace where the application is deployed
+
+
+        // DOCKER CONFIGURATION
+
+        IMAGE_TAG = ''
+        // Git commit ID will be assigned dynamically as the Docker image tag
+
+
+        // PYTHON CONFIGURATION
+
+        PYTHONPATH = 'multi_doc_chat'
+        // Python module path used by the application and tests
+
+
+        // CI TEST CONFIGURATION
+
+        GROQ_API_KEY = 'dummy'
+        // Dummy Groq API key used during automated tests
+
+        GOOGLE_API_KEY = 'dummy'
+        // Dummy Google API key used during automated tests
+
+        LLM_PROVIDER = 'google'
+        // Select Google as the LLM provider during automated tests
     }
 
     stages {
@@ -165,13 +200,12 @@ pipeline {
                 bat '''
                     kubectl apply -f k8s/namespace.yaml
                     kubectl apply -f k8s/configmap.yaml
-                    kubectl apply -f k8s/secret.yaml
                     kubectl apply -f k8s/deployment.yaml
                     kubectl apply -f k8s/service.yaml
                 '''                                  // Create or update Kubernetes resources
 
                 bat '''
-                    kubectl set image deployment/llmops-app llmops-app=%ECR_REGISTRY%/%ECR_REPOSITORY%:%IMAGE_TAG% -n llmops
+                    kubectl set image deployment/llmops-app llmops-container=%ECR_REGISTRY%/%ECR_REPOSITORY%:%IMAGE_TAG% -n llmops
                 '''                                  // Update deployment with latest Docker image
             }
         }

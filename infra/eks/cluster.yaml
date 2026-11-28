@@ -63,7 +63,7 @@ vpc:
     privateAccess: true              # Allows access from inside the VPC
 
   publicAccessCIDRs:
-    - "183.82.162.191/32"            # Restricts public API access to your current IP
+    - "183.82.160.73/32"           # Restricts public API access to your current IP
 
 # ----------------------------------------------------------
 # MANAGED WORKER NODE GROUP

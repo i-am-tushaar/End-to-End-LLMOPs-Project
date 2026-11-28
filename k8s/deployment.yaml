@@ -54,7 +54,7 @@ spec:
         - name: llmops-container  # Name of the application container
 
           # Docker image stored in Amazon Elastic Container Registry
-          image: 452975373208.dkr.ecr.eu-north-1.amazonaws.com/end-to-end-llmops:v1
+          image: 452975373208.dkr.ecr.eu-north-1.amazonaws.com/end-to-end-llmops:latest
 
           imagePullPolicy: Always  # Always check ECR for the specified image tag
 
@@ -89,6 +89,7 @@ spec:
               port: 8080           # Port used for the health check
             periodSeconds: 10      # Check every 10 seconds
             failureThreshold: 30   # Allow up to 30 failed checks
+            timeoutSeconds: 5
 
           # Check whether the application is ready to receive traffic
           readinessProbe:
@@ -97,3 +98,4 @@ spec:
               port: 8080           # Port used for the health check
             periodSeconds: 10      # Check every 10 seconds
             failureThreshold: 3    # Mark Pod not ready after 3 failures
+            timeoutSeconds: 5

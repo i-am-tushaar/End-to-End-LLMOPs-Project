@@ -263,6 +263,33 @@ pipeline {
                 '''
             }
         }
+
+
+        /*
+         * STAGE 8: Verify Amazon ECR Access
+         *
+         * DESCRIPTION:
+         * Checks whether Jenkins can access the target ECR repository.
+         * Verifies the repository exists and AWS permissions are working.
+         */
+
+        stage('Verify ECR Access') {
+            steps {
+                bat '''
+                    echo Checking Amazon ECR repository...
+
+                    aws ecr describe-repositories ^
+                        --repository-names end-to-end-llmops ^
+                        --region "%AWS_REGION%" ^
+                        --profile "%AWS_PROFILE%"
+
+                    rem Verify that the ECR repository exists and is accessible.
+
+                    if errorlevel 1 exit /b 1
+                    rem Stop if the repository is missing or access is denied.
+                '''
+            }
+        }
     }
 
     /*

@@ -1,0 +1,100 @@
+
+/*
+ * PROJECT: End-to-End LLMOps Project
+ * PIPELINE: Jenkins Windows CI/CD for Amazon ECR
+ *
+ * DESCRIPTION:
+ * This is an initial diagnostic pipeline that verifies whether
+ * the Jenkins Windows service can access the required tools.
+ *
+ * CHECKS:
+ * 1. UV installation and Python version.
+ * 2. Docker installation and availability.
+ * 3. AWS CLI installation.
+ * 4. AWS authentication using the Jenkins IAM Roles Anywhere profile.
+ *
+ * NOTE:
+ * This pipeline only checks the environment.
+ * It does not build or push Docker images to ECR.
+ */
+
+pipeline {
+    agent any                         // Run the pipeline on any available Jenkins agent.
+
+    environment {
+        UV_EXE = 'C:\\Users\\Lenovo\\.local\\bin\\uv.exe' // Path to UV executable.
+        AWS_PROFILE = 'jenkins-eks'                      // AWS profile configured for Jenkins SYSTEM.
+        AWS_REGION = 'eu-north-1'                        // AWS region containing the ECR repository.
+    }
+
+    stages {
+
+        stage('Check UV and Python') {
+            steps {
+                bat '''
+                    echo Checking UV installation...
+                    if not exist "%UV_EXE%" (
+                        echo ERROR: UV executable not found!
+                        exit /b 1
+                    )
+
+                    "%UV_EXE%" --version
+                    rem Display the installed UV version.
+
+                    echo Checking project Python version...
+                    "%UV_EXE%" run --locked python --version
+                    rem Run Python using the project's locked dependencies.
+                '''
+            }
+        }
+
+        stage('Check Docker') {
+            steps {
+                bat '''
+                    echo Checking Docker installation...
+                    where docker
+                    rem Locate the Docker executable.
+
+                    docker --version
+                    rem Display the Docker version.
+                '''
+            }
+        }
+
+        stage('Check AWS CLI') {
+            steps {
+                bat '''
+                    echo Checking AWS CLI installation...
+                    where aws
+                    rem Locate the AWS CLI executable.
+
+                    aws --version
+                    rem Display the AWS CLI version.
+                '''
+            }
+        }
+
+        stage('Check AWS Authentication') {
+            steps {
+                bat '''
+                    echo Checking AWS identity...
+
+                    aws sts get-caller-identity --profile "%AWS_PROFILE%" --region "%AWS_REGION%"
+                    rem Verify that Jenkins can authenticate with AWS.
+                '''
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'SUCCESS: All environment checks passed!'
+            // Display this message when every stage succeeds.
+        }
+
+        failure {
+            echo 'FAILURE: One or more environment checks failed.'
+            // Display this message if any stage fails.
+        }
+    }
+}

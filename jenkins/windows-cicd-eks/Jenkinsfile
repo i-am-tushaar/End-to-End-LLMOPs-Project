@@ -146,32 +146,31 @@ pipeline {
             }
         }
 
+
         // STAGE 5: BUILD DOCKER IMAGE
-        // Generate a unique image tag using the Git commit ID and build the Docker image.
+        // Generate a unique image tag using the Jenkins build number.
 
         stage('Docker Build') {
             steps {
                 script {
-
-                    // Get the Git commit ID provided by Jenkins after checkout
-                    if (!env.GIT_COMMIT) {
-                        error "Git commit ID is not available!"
-                    }
-
-                    // Generate a 12-character Docker image tag
-                    env.IMAGE_TAG = env.GIT_COMMIT.take(12)
+                
+                    // Generate Docker image tag using Jenkins build number
+                    // Example: build-1, build-2, build-3
+                    env.IMAGE_TAG = "build-${env.BUILD_NUMBER}"
 
                     // Display the generated image tag
                     echo "Docker Image Tag: ${env.IMAGE_TAG}"
 
                 }
 
-                // Build Docker image using the generated Git commit tag
+                // Build Docker image using the generated tag
                 bat '''
                     docker build -t %ECR_REGISTRY%/%ECR_REPOSITORY%:%IMAGE_TAG% .
                 '''
             }
         }
+
+
 
         // STAGE 6: VERIFY DOCKER IMAGE
 

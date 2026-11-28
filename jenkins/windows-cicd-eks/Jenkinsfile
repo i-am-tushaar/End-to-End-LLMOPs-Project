@@ -6,29 +6,29 @@ PROJECT: End-to-End-LLMOps-Project
 PURPOSE: Jenkins CI/CD Pipeline for AWS EKS Deployment
 ==============================================================
 
-DESCRIPTION:
-Automates application deployment to Amazon EKS.
-
 PIPELINE STAGES:
-1. Checkout                  - Download source code from GitHub.
-2. Verify Tools              - Check required tools.
-3. Run Tests                 - Install dependencies and execute tests.
+
+1. Checkout                  - Download source code.
+2. Verify Tools              - Verify required tools.
+3. Run Tests                 - Install dependencies and run tests.
 4. AWS Authentication       - Verify AWS identity.
 5. Docker Build              - Build Docker image.
 6. Image Validation          - Verify Docker image.
 7. ECR Login                 - Authenticate with Amazon ECR.
 8. Push Image to ECR         - Upload Docker image.
-9. Configure EKS             - Connect kubectl to EKS.
-10. Verify Kubernetes        - Check Kubernetes connection.
+9. Configure EKS             - Configure kubectl.
+10. Verify Kubernetes        - Check cluster connection.
 11. Deploy to EKS            - Deploy application.
-12. Verify Deployment        - Verify application deployment.
+12. Verify Deployment        - Verify application rollout.
 
 IMPORTANT:
+
 - Jenkins runs natively on Windows.
 - AWS authentication uses the jenkins-eks profile.
 - IAM Roles Anywhere must be configured.
 - Kubernetes Secret must contain actual credentials.
 - This pipeline does not create AWS infrastructure.
+- Docker ECR credentials use a temporary isolated config.
 
 ==============================================================
 */
@@ -45,6 +45,7 @@ pipeline {
     options {
         timestamps()
         disableConcurrentBuilds()
+        skipDefaultCheckout(true)
     }
 
     environment {
@@ -58,7 +59,7 @@ pipeline {
         // AWS CLI profile configured with IAM Roles Anywhere.
 
         AWS_CONFIG_FILE = 'C:\\Windows\\System32\\config\\systemprofile\\.aws\\config'
-        // AWS configuration file accessible to Jenkins running as LocalSystem.
+        // AWS configuration file accessible to Jenkins LocalSystem.
 
         ECR_REGISTRY = '452975373208.dkr.ecr.eu-north-1.amazonaws.com'
         // Amazon ECR registry URL.
@@ -80,10 +81,10 @@ pipeline {
         // CI TEST CONFIGURATION
 
         GROQ_API_KEY = 'dummy'
-        // Dummy key for automated tests that do not make real API calls.
+        // Dummy key for tests that do not make real API calls.
 
         GOOGLE_API_KEY = 'dummy'
-        // Dummy key for automated tests that do not make real API calls.
+        // Dummy key for tests that do not make real API calls.
 
         LLM_PROVIDER = 'google'
         // Select Google as the LLM provider during tests.
@@ -95,6 +96,7 @@ pipeline {
     // ========================================================
 
     stages {
+
 
         // ----------------------------------------------------
         // STAGE 1: CHECKOUT SOURCE CODE
@@ -120,10 +122,10 @@ pipeline {
                     REM Verify installed software versions
 
                     python --version
+                    uv --version
                     docker --version
                     aws --version
                     kubectl version --client
-                    uv --version
                 '''
             }
         }
@@ -139,9 +141,13 @@ pipeline {
                 bat '''
 
                     REM Install exact project dependencies from uv.lock
+                    REM --frozen prevents changes to the lock file
+
                     uv sync --frozen
 
                     REM Execute all project tests using the project environment
+                    REM --no-sync avoids another dependency synchronization
+
                     uv run --no-sync python -m pytest tests -v
 
                 '''
@@ -157,9 +163,11 @@ pipeline {
             steps {
 
                 bat '''
-                    REM Verify AWS identity using the configured profile
+
+                    REM Verify AWS identity using IAM Roles Anywhere
 
                     aws --profile jenkins-eks sts get-caller-identity --region eu-north-1
+
                 '''
             }
         }
@@ -174,12 +182,12 @@ pipeline {
 
                 bat '''
 
-                    REM Use Jenkins BUILD_NUMBER as the unique Docker image tag
-                    REM Example: build-1, build-2, build-3
+                    REM Generate a unique image tag from Jenkins build number
+                    REM Example: build-10, build-11, build-12
 
                     echo Docker Image Tag: build-%BUILD_NUMBER%
 
-                    REM Build Docker image using the generated tag
+                    REM Build Docker image with the generated tag
 
                     docker build -t %ECR_REGISTRY%/%ECR_REPOSITORY%:build-%BUILD_NUMBER% .
 
@@ -197,11 +205,11 @@ pipeline {
 
                 bat '''
 
-                    REM Display the image being validated
+                    REM Display the image tag being validated
 
                     echo Validating Docker Image: build-%BUILD_NUMBER%
 
-                    REM Verify that the Docker image exists locally
+                    REM Verify that the image exists locally
 
                     docker image inspect %ECR_REGISTRY%/%ECR_REPOSITORY%:build-%BUILD_NUMBER%
 
@@ -219,9 +227,19 @@ pipeline {
 
                 bat '''
 
-                    REM Authenticate Docker with Amazon ECR
+                    REM Create an isolated Docker configuration directory
+                    REM This avoids the existing Windows credential helper
 
-                    aws --profile jenkins-eks ecr get-login-password --region eu-north-1 | docker login --username AWS --password-stdin %ECR_REGISTRY%
+                    if not exist "%WORKSPACE%\\.docker-config" mkdir "%WORKSPACE%\\.docker-config"
+
+                    REM Create a clean Docker configuration without a credential helper
+
+                    > "%WORKSPACE%\\.docker-config\\config.json" echo {"auths":{}}
+
+                    REM Authenticate Docker with Amazon ECR
+                    REM Use the isolated configuration for this login
+
+                    aws --profile jenkins-eks ecr get-login-password --region eu-north-1 | docker --config "%WORKSPACE%\\.docker-config" login --username AWS --password-stdin %ECR_REGISTRY%
 
                 '''
             }
@@ -237,9 +255,10 @@ pipeline {
 
                 bat '''
 
-                    REM Push the same image tag to Amazon ECR
+                    REM Push the same image tag generated in Stage 5
+                    REM Reuse the isolated Docker configuration from Stage 7
 
-                    docker push %ECR_REGISTRY%/%ECR_REPOSITORY%:build-%BUILD_NUMBER%
+                    docker --config "%WORKSPACE%\\.docker-config" push %ECR_REGISTRY%/%ECR_REPOSITORY%:build-%BUILD_NUMBER%
 
                 '''
             }
@@ -273,7 +292,7 @@ pipeline {
 
                 bat '''
 
-                    REM Verify that Kubernetes worker nodes are accessible
+                    REM Verify that the Kubernetes worker nodes are accessible
 
                     kubectl get nodes
 
@@ -312,8 +331,8 @@ pipeline {
 
                 bat '''
 
-                    REM Update Deployment with the newly pushed ECR image
-                    REM Use the same Jenkins build number used during Docker Build
+                    REM Update the application Deployment with the new ECR image
+                    REM Use the same Jenkins build number used in Docker Build
 
                     kubectl set image deployment/llmops-app llmops-container=%ECR_REGISTRY%/%ECR_REPOSITORY%:build-%BUILD_NUMBER% -n llmops
 
@@ -331,7 +350,7 @@ pipeline {
 
                 bat '''
 
-                    REM Wait until the application Deployment is successfully updated
+                    REM Wait until the application rollout succeeds
 
                     kubectl rollout status deployment/llmops-app --namespace=llmops --timeout=300s
 
@@ -340,7 +359,7 @@ pipeline {
 
                 bat '''
 
-                    REM Display running application Pods
+                    REM Display application Pods
 
                     kubectl get pods -n llmops
 
@@ -363,19 +382,25 @@ pipeline {
         success {
 
             echo 'LLMOps application deployment pipeline completed successfully.'
-            // Display success message.
+
         }
 
         failure {
 
             echo 'LLMOps CI/CD pipeline failed. Check the Jenkins console output.'
-            // Display failure message.
+
         }
 
         always {
 
             echo 'Jenkins pipeline execution finished.'
-            // Always execute after the pipeline finishes.
+
+            // Remove temporary Docker credentials after execution
+            // This runs after both successful and failed builds.
+
+            bat '''
+                if exist "%WORKSPACE%\\.docker-config" rmdir /s /q "%WORKSPACE%\\.docker-config"
+            '''
         }
     }
 }

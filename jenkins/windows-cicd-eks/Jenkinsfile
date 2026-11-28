@@ -10,256 +10,372 @@ DESCRIPTION:
 Automates application deployment to Amazon EKS.
 
 PIPELINE STAGES:
-1. Checkout       - Download source code from GitHub.
-2. Verify Tools   - Check required tools.
-3. Run Tests      - Execute project test cases.
-4. AWS Login      - Verify AWS identity.
-5. Docker Build   - Build Docker image.
-6. Image Check    - Verify Docker image.
-7. ECR Login      - Authenticate with Amazon ECR.
-8. Push to ECR    - Upload Docker image.
-9. EKS Configure  - Connect kubectl to EKS.
-10. Verify        - Check Kubernetes connection.
-11. Deploy        - Deploy application to EKS.
-12. Validate      - Verify application deployment.
+1. Checkout                  - Download source code from GitHub.
+2. Verify Tools              - Check required tools.
+3. Run Tests                 - Install dependencies and execute tests.
+4. AWS Authentication       - Verify AWS identity.
+5. Docker Build              - Build Docker image.
+6. Image Validation          - Verify Docker image.
+7. ECR Login                 - Authenticate with Amazon ECR.
+8. Push Image to ECR         - Upload Docker image.
+9. Configure EKS             - Connect kubectl to EKS.
+10. Verify Kubernetes        - Check Kubernetes connection.
+11. Deploy to EKS            - Deploy application.
+12. Verify Deployment        - Verify application deployment.
 
 IMPORTANT:
 - Jenkins runs natively on Windows.
 - AWS authentication uses the jenkins-eks profile.
 - IAM Roles Anywhere must be configured.
-- Jenkins requires EKS deployment permissions.
 - Kubernetes Secret must contain actual credentials.
 - This pipeline does not create AWS infrastructure.
 
 ==============================================================
 */
 
+
+// ============================================================
 // PIPELINE CONFIGURATION
+// ============================================================
 
 pipeline {
 
-    agent any                                      // Use available Jenkins agent
+    agent any
 
     options {
-        timestamps()                               // Display timestamps
-        disableConcurrentBuilds()                  // Prevent concurrent builds
+        timestamps()
+        disableConcurrentBuilds()
     }
 
     environment {
 
         // AWS CONFIGURATION
 
-        AWS_REGION = 'eu-north-1' 
-        // AWS region where your ECR repository and EKS cluster exist
+        AWS_REGION = 'eu-north-1'
+        // AWS region containing ECR and EKS resources.
 
         AWS_PROFILE = 'jenkins-eks'
-        // AWS CLI profile configured with IAM Roles Anywhere authentication
+        // AWS CLI profile configured with IAM Roles Anywhere.
 
         AWS_CONFIG_FILE = 'C:\\Windows\\System32\\config\\systemprofile\\.aws\\config'
-        // AWS configuration file accessible to Jenkins running as LocalSystem
+        // AWS configuration file accessible to Jenkins running as LocalSystem.
 
         ECR_REGISTRY = '452975373208.dkr.ecr.eu-north-1.amazonaws.com'
-        // Amazon ECR registry URL where Docker images are stored
+        // Amazon ECR registry URL.
 
         ECR_REPOSITORY = 'end-to-end-llmops'
-        // Name of the ECR repository
+        // Amazon ECR repository name.
 
         EKS_CLUSTER_NAME = 'llmops-eks-cluster'
-        // Name of the Amazon EKS Kubernetes cluster
+        // Amazon EKS cluster name.
 
         K8S_NAMESPACE = 'llmops'
-        // Kubernetes namespace where the application is deployed
-
-
-        // DOCKER CONFIGURATION
-
-        IMAGE_TAG = ''
-        // Git commit ID will be assigned dynamically as the Docker image tag
-
+        // Kubernetes namespace.
 
         // PYTHON CONFIGURATION
 
         PYTHONPATH = 'multi_doc_chat'
-        // Python module path used by the application and tests
-
+        // Python module path used by the application and tests.
 
         // CI TEST CONFIGURATION
 
         GROQ_API_KEY = 'dummy'
-        // Dummy Groq API key used during automated tests
+        // Dummy key for automated tests that do not make real API calls.
 
         GOOGLE_API_KEY = 'dummy'
-        // Dummy Google API key used during automated tests
+        // Dummy key for automated tests that do not make real API calls.
 
         LLM_PROVIDER = 'google'
-        // Select Google as the LLM provider during automated tests
+        // Select Google as the LLM provider during tests.
     }
+
+
+    // ========================================================
+    // PIPELINE STAGES
+    // ========================================================
 
     stages {
 
+        // ----------------------------------------------------
         // STAGE 1: CHECKOUT SOURCE CODE
+        // ----------------------------------------------------
 
         stage('Checkout') {
             steps {
-                checkout scm                         // Download source code
+
+                checkout scm
+                // Download source code from the configured Git branch.
             }
         }
 
+
+        // ----------------------------------------------------
         // STAGE 2: VERIFY REQUIRED TOOLS
+        // ----------------------------------------------------
 
         stage('Verify Tools') {
             steps {
+
                 bat '''
+                    REM Verify installed software versions
+
                     python --version
                     docker --version
                     aws --version
                     kubectl version --client
-                '''                                  // Verify installed tools
+                    uv --version
+                '''
             }
         }
 
 
+        // ----------------------------------------------------
         // STAGE 3: RUN PROJECT TESTS
-        // Install project dependencies and execute automated tests.
+        // ----------------------------------------------------
 
         stage('Run Tests') {
             steps {
+
                 bat '''
 
-                    REM Install project dependencies using pyproject.toml and uv.lock
-                    REM --frozen prevents modifications to the lock file
+                    REM Install exact project dependencies from uv.lock
                     uv sync --frozen
 
-                    REM Execute project tests using the project's virtual environment
-                    REM --no-sync prevents dependency synchronization again
+                    REM Execute all project tests using the project environment
                     uv run --no-sync python -m pytest tests -v
 
                 '''
             }
         }
 
+
+        // ----------------------------------------------------
         // STAGE 4: VERIFY AWS AUTHENTICATION
+        // ----------------------------------------------------
 
         stage('AWS Authentication') {
             steps {
-                bat 'aws --profile jenkins-eks sts get-caller-identity --region eu-north-1' // Verify AWS identity
-            }
-        }
 
-
-        // STAGE 5: BUILD DOCKER IMAGE
-        // Generate a unique Docker image tag using the Jenkins build number.
-
-        stage('Docker Build') {
-            steps {
-                script {
-                
-                    // Get the current Jenkins build number
-                    // Example: 1, 2, 3, 4
-                    env.IMAGE_TAG = "build-${currentBuild.number}"
-
-                    // Display the generated Docker image tag
-                    echo "Docker Image Tag: ${env.IMAGE_TAG}"
-
-                    // Build Docker image using the generated tag
-                    bat '''
-                        docker build -t %ECR_REGISTRY%/%ECR_REPOSITORY%:%IMAGE_TAG% .
-                    '''
-
-                }
-            }
-        }                                           
-
-
-        // STAGE 6: VERIFY DOCKER IMAGE
-        // Verify that the generated Docker image exists locally.
-
-        stage('Image Validation') {
-            steps {
                 bat '''
-                    docker image inspect %ECR_REGISTRY%/%ECR_REPOSITORY%:%IMAGE_TAG%
+                    REM Verify AWS identity using the configured profile
+
+                    aws --profile jenkins-eks sts get-caller-identity --region eu-north-1
                 '''
             }
         }
 
+
+        // ----------------------------------------------------
+        // STAGE 5: BUILD DOCKER IMAGE
+        // ----------------------------------------------------
+
+        stage('Docker Build') {
+            steps {
+
+                bat '''
+
+                    REM Use Jenkins BUILD_NUMBER as the unique Docker image tag
+                    REM Example: build-1, build-2, build-3
+
+                    echo Docker Image Tag: build-%BUILD_NUMBER%
+
+                    REM Build Docker image using the generated tag
+
+                    docker build -t %ECR_REGISTRY%/%ECR_REPOSITORY%:build-%BUILD_NUMBER% .
+
+                '''
+            }
+        }
+
+
+        // ----------------------------------------------------
+        // STAGE 6: VERIFY DOCKER IMAGE
+        // ----------------------------------------------------
+
+        stage('Image Validation') {
+            steps {
+
+                bat '''
+
+                    REM Display the image being validated
+
+                    echo Validating Docker Image: build-%BUILD_NUMBER%
+
+                    REM Verify that the Docker image exists locally
+
+                    docker image inspect %ECR_REGISTRY%/%ECR_REPOSITORY%:build-%BUILD_NUMBER%
+
+                '''
+            }
+        }
+
+
+        // ----------------------------------------------------
         // STAGE 7: LOGIN TO AMAZON ECR
+        // ----------------------------------------------------
 
         stage('ECR Login') {
             steps {
+
                 bat '''
+
+                    REM Authenticate Docker with Amazon ECR
+
                     aws --profile jenkins-eks ecr get-login-password --region eu-north-1 | docker login --username AWS --password-stdin %ECR_REGISTRY%
-                '''                                  // Authenticate Docker with ECR
+
+                '''
             }
         }
 
+
+        // ----------------------------------------------------
         // STAGE 8: PUSH IMAGE TO AMAZON ECR
+        // ----------------------------------------------------
 
         stage('Push Image to ECR') {
             steps {
-                bat 'docker push %ECR_REGISTRY%/%ECR_REPOSITORY%:%IMAGE_TAG%' // Push image to ECR
+
+                bat '''
+
+                    REM Push the same image tag to Amazon ECR
+
+                    docker push %ECR_REGISTRY%/%ECR_REPOSITORY%:build-%BUILD_NUMBER%
+
+                '''
             }
         }
 
+
+        // ----------------------------------------------------
         // STAGE 9: CONFIGURE KUBECTL FOR EKS
+        // ----------------------------------------------------
 
         stage('Configure EKS') {
             steps {
-                bat 'aws eks update-kubeconfig --region eu-north-1 --name llmops-eks-cluster --profile jenkins-eks' // Configure EKS access
+
+                bat '''
+
+                    REM Configure kubectl to communicate with the EKS cluster
+
+                    aws eks update-kubeconfig --region eu-north-1 --name llmops-eks-cluster --profile jenkins-eks
+
+                '''
             }
         }
 
-        // STAGE 10: VALIDATE KUBERNETES CONNECTION
+
+        // ----------------------------------------------------
+        // STAGE 10: VERIFY KUBERNETES CONNECTION
+        // ----------------------------------------------------
 
         stage('Verify Kubernetes Connection') {
             steps {
-                bat 'kubectl get nodes'              // Check worker nodes
+
+                bat '''
+
+                    REM Verify that Kubernetes worker nodes are accessible
+
+                    kubectl get nodes
+
+                '''
             }
         }
 
+
+        // ----------------------------------------------------
         // STAGE 11: DEPLOY APPLICATION TO EKS
+        // ----------------------------------------------------
 
         stage('Deploy to EKS') {
             steps {
-                bat '''
-                    kubectl apply -f k8s/namespace.yaml
-                    kubectl apply -f k8s/configmap.yaml
-                    kubectl apply -f k8s/deployment.yaml
-                    kubectl apply -f k8s/service.yaml
-                '''                                  // Create or update Kubernetes resources
 
                 bat '''
-                    kubectl set image deployment/llmops-app llmops-container=%ECR_REGISTRY%/%ECR_REPOSITORY%:%IMAGE_TAG% -n llmops
-                '''                                  // Update deployment with latest Docker image
+
+                    REM Create or update the Kubernetes namespace
+
+                    kubectl apply -f k8s/namespace.yaml
+
+                    REM Apply application configuration
+
+                    kubectl apply -f k8s/configmap.yaml
+
+                    REM Apply Kubernetes Deployment
+
+                    kubectl apply -f k8s/deployment.yaml
+
+                    REM Apply Kubernetes Service
+
+                    kubectl apply -f k8s/service.yaml
+
+                '''
+
+
+                bat '''
+
+                    REM Update Deployment with the newly pushed ECR image
+                    REM Use the same Jenkins build number used during Docker Build
+
+                    kubectl set image deployment/llmops-app llmops-container=%ECR_REGISTRY%/%ECR_REPOSITORY%:build-%BUILD_NUMBER% -n llmops
+
+                '''
             }
         }
 
+
+        // ----------------------------------------------------
         // STAGE 12: VERIFY DEPLOYMENT
+        // ----------------------------------------------------
 
         stage('Verify Deployment') {
             steps {
-                bat 'kubectl rollout status deployment/llmops-app --namespace=llmops --timeout=300s' // Verify rollout
 
                 bat '''
+
+                    REM Wait until the application Deployment is successfully updated
+
+                    kubectl rollout status deployment/llmops-app --namespace=llmops --timeout=300s
+
+                '''
+
+
+                bat '''
+
+                    REM Display running application Pods
+
                     kubectl get pods -n llmops
+
+                    REM Display Kubernetes Services
+
                     kubectl get services -n llmops
-                '''                                  // Display pods and services
+
+                '''
             }
         }
     }
 
+
+    // ========================================================
     // POST-BUILD ACTIONS
+    // ========================================================
 
     post {
+
         success {
-            echo 'LLMOps application deployment pipeline completed successfully.' // Success message
+
+            echo 'LLMOps application deployment pipeline completed successfully.'
+            // Display success message.
         }
 
         failure {
-            echo 'LLMOps CI/CD pipeline failed. Check the Jenkins console output.' // Failure message
+
+            echo 'LLMOps CI/CD pipeline failed. Check the Jenkins console output.'
+            // Display failure message.
         }
 
         always {
-            echo 'Jenkins pipeline execution finished.' // Always executes
+
+            echo 'Jenkins pipeline execution finished.'
+            // Always execute after the pipeline finishes.
         }
     }
 }

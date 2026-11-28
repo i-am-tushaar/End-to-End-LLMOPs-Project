@@ -1,0 +1,403 @@
+
+/*
+ * ================================================================
+ * PROJECT: End-to-End LLMOps Project
+ * PIPELINE: Windows Jenkins CI/CD with Amazon ECR
+ * FILE: jenkins/windows-cicd-ecr/Jenkinsfile
+ * ================================================================
+ *
+ * DESCRIPTION:
+ * This Jenkins pipeline automates the CI/CD process for the
+ * End-to-End LLMOps application using Jenkins on Windows.
+ *
+ * OBJECTIVES:
+ * 1. Verify UV and Python installation.
+ * 2. Install project dependencies using UV.
+ * 3. Execute automated tests using Pytest.
+ * 4. Verify Docker CLI and Docker Engine connectivity.
+ * 5. Build the application Docker image.
+ * 6. Verify AWS CLI installation.
+ * 7. Verify AWS authentication using IAM Roles Anywhere.
+ *
+ * UPCOMING OBJECTIVES:
+ * 8. Authenticate with Amazon ECR.
+ * 9. Push the Docker image to Amazon ECR.
+ * 10. Verify the uploaded image in ECR.
+ *
+ * EXECUTION ENVIRONMENT:
+ * - Operating System: Windows
+ * - Jenkins Account: NT AUTHORITY\SYSTEM
+ * - Python: 3.14.6
+ * - UV: 0.11.23
+ * - Docker: Docker Desktop Linux Engine
+ * - AWS Region: eu-north-1
+ *
+ * DOCKER IMAGE:
+ * - Name: end-to-end-llmops
+ * - Tag: latest
+ *
+ * NOTE:
+ * This version builds and verifies the Docker image locally.
+ * ECR authentication and image pushing will be added separately.
+ */
+
+pipeline {
+
+    // Run this pipeline on any available Jenkins agent.
+    agent any
+
+    // Define environment variables available throughout the pipeline.
+    environment {
+
+        UV_EXE = 'C:\\Users\\Lenovo\\.local\\bin\\uv.exe'
+        // Absolute path to the UV executable.
+
+        AWS_PROFILE = 'jenkins-eks'
+        // AWS profile configured for Jenkins using IAM Roles Anywhere.
+
+        AWS_REGION = 'eu-north-1'
+        // AWS region where the ECR repository is hosted.
+
+        DOCKER_HOST = 'npipe:////./pipe/dockerDesktopLinuxEngine'
+        // Connect Jenkins to Docker Desktop's Linux Engine.
+
+        DOCKER_IMAGE = 'end-to-end-llmops:latest'
+        // Name and tag assigned to the application Docker image.
+    }
+
+    stages {
+
+        /*
+         * STAGE 1: Check UV and Python
+         *
+         * DESCRIPTION:
+         * Verifies that UV is installed and accessible.
+         * Also checks the Python version used by the project.
+         */
+
+        stage('Check UV and Python') {
+            steps {
+                bat '''
+                    echo Checking UV installation...
+
+                    if not exist "%UV_EXE%" (
+                        echo ERROR: UV executable not found!
+                        exit /b 1
+                    )
+                    rem Stop if the UV executable does not exist.
+
+                    "%UV_EXE%" --version
+                    rem Display the installed UV version.
+
+                    echo Checking project Python version...
+
+                    "%UV_EXE%" run --locked python --version
+                    rem Display the Python version managed by UV.
+
+                    if errorlevel 1 exit /b 1
+                    rem Stop if the Python version check fails.
+                '''
+            }
+        }
+
+        /*
+         * STAGE 2: Run Pytest Tests
+         *
+         * DESCRIPTION:
+         * Installs project dependencies using the UV lockfile.
+         * Executes the automated test suite.
+         * Stops the pipeline if dependency installation or testing fails.
+         */
+
+        stage('Run Pytest Tests') {
+            steps {
+                bat '''
+                    echo Installing project dependencies...
+
+                    "%UV_EXE%" sync --locked
+                    rem Install dependencies exactly as defined in uv.lock.
+
+                    if errorlevel 1 exit /b 1
+                    rem Stop if dependency installation fails.
+
+                    echo Running Pytest test suite...
+
+                    "%UV_EXE%" run --locked pytest tests/ -v
+                    rem Execute all project tests with detailed output.
+
+                    if errorlevel 1 exit /b 1
+                    rem Stop if any test fails.
+                '''
+            }
+        }
+
+        /*
+         * STAGE 3: Check Docker
+         *
+         * DESCRIPTION:
+         * Verifies that Docker is installed and accessible
+         * from the Jenkins Windows service account.
+         */
+
+        stage('Check Docker') {
+            steps {
+                bat '''
+                    echo Checking Docker installation...
+
+                    where docker
+                    rem Locate the Docker executable.
+
+                    docker --version
+                    rem Display the installed Docker version.
+
+                    if errorlevel 1 exit /b 1
+                    rem Stop if Docker is not accessible.
+                '''
+            }
+        }
+
+        /*
+         * STAGE 4: Check Docker Engine
+         *
+         * DESCRIPTION:
+         * Verifies that Jenkins can communicate with
+         * the Docker Desktop Linux Engine.
+         */
+
+        stage('Check Docker Engine') {
+            steps {
+                bat '''
+                    echo Checking Docker Engine connectivity...
+
+                    docker info
+                    rem Display Docker Engine information.
+
+                    if errorlevel 1 exit /b 1
+                    rem Stop if Jenkins cannot connect to Docker Engine.
+                '''
+            }
+        }
+
+        /*
+         * STAGE 5: Build Docker Image
+         *
+         * DESCRIPTION:
+         * Builds the End-to-End LLMOps application image
+         * using the Dockerfile located in the project root.
+         *
+         * IMAGE NAME: end-to-end-llmops
+         * IMAGE TAG: latest
+         */
+
+        stage('Build Docker Image') {
+            steps {
+                bat '''
+                    echo Building application Docker image...
+
+                    docker build -t "%DOCKER_IMAGE%" -f Dockerfile .
+                    rem Build the Docker image using the root Dockerfile.
+
+                    if errorlevel 1 exit /b 1
+                    rem Stop if the Docker image build fails.
+
+                    echo Verifying Docker image...
+
+                    docker image inspect "%DOCKER_IMAGE%" >NUL 2>&1
+                    rem Check whether the newly built image exists locally.
+
+                    if errorlevel 1 exit /b 1
+                    rem Stop if the Docker image cannot be found.
+
+                    docker images "%DOCKER_IMAGE%"
+                    rem Display the verified Docker image.
+                '''
+            }
+        }
+
+        /*
+         * STAGE 6: Check AWS CLI
+         *
+         * DESCRIPTION:
+         * Verifies that AWS CLI is installed and accessible
+         * from the Jenkins Windows service account.
+         */
+
+        stage('Check AWS CLI') {
+            steps {
+                bat '''
+                    echo Checking AWS CLI installation...
+
+                    where aws
+                    rem Locate the AWS CLI executable.
+
+                    aws --version
+                    rem Display the installed AWS CLI version.
+
+                    if errorlevel 1 exit /b 1
+                    rem Stop if AWS CLI is not accessible.
+                '''
+            }
+        }
+
+        /*
+         * STAGE 7: Check AWS Authentication
+         *
+         * DESCRIPTION:
+         * Verifies AWS authentication using the existing
+         * Jenkins IAM Roles Anywhere configuration.
+         *
+         * EXPECTED ROLE:
+         * JenkinsEKSDeploymentRole
+         */
+
+        stage('Check AWS Authentication') {
+            steps {
+                bat '''
+                    echo Checking AWS identity...
+
+                    aws sts get-caller-identity --profile "%AWS_PROFILE%" --region "%AWS_REGION%"
+                    rem Verify the AWS identity assumed by Jenkins.
+
+                    if errorlevel 1 exit /b 1
+                    rem Stop if AWS authentication fails.
+                '''
+            }
+        }
+
+
+        /*
+         * STAGE 8: Verify Amazon ECR Access
+         *
+         * DESCRIPTION:
+         * Checks whether Jenkins can access the target ECR repository.
+         * Verifies the repository exists and AWS permissions are working.
+         */
+
+        stage('Verify ECR Access') {
+            steps {
+                bat '''
+                    echo Checking Amazon ECR repository...
+
+                    aws ecr describe-repositories ^
+                        --repository-names end-to-end-llmops ^
+                        --region "%AWS_REGION%" ^
+                        --profile "%AWS_PROFILE%"
+
+                    rem Verify that the ECR repository exists and is accessible.
+
+                    if errorlevel 1 exit /b 1
+                    rem Stop if the repository is missing or access is denied.
+                '''
+            }
+        }
+
+                /*
+         * STAGE 9: Tag Docker Image
+         *
+         * DESCRIPTION:
+         * Assigns the AWS ECR repository URI to the locally
+         * built Docker image.
+         */
+
+        stage('Tag Docker Image') {
+            steps {
+                bat '''
+                    echo Tagging Docker image for Amazon ECR...
+
+                    docker tag "%DOCKER_IMAGE%" ^
+                        452975373208.dkr.ecr.eu-north-1.amazonaws.com/end-to-end-llmops:latest
+
+                    rem Assign the ECR repository name to the local image.
+
+                    if errorlevel 1 exit /b 1
+                    rem Stop if Docker image tagging fails.
+
+                    echo Verifying tagged image...
+
+                    docker images ^
+                        452975373208.dkr.ecr.eu-north-1.amazonaws.com/end-to-end-llmops
+                '''
+            }
+        }
+
+                /*
+         * STAGE 10: Push Docker Image to Amazon ECR
+         *
+         * DESCRIPTION:
+         * Uploads the locally tagged Docker image to the
+         * Amazon ECR repository using the Docker ECR credential helper.
+         */
+
+        stage('Push Docker Image to ECR') {
+            steps {
+                bat '''
+                    echo Pushing Docker image to Amazon ECR...
+
+                    docker push ^
+                        452975373208.dkr.ecr.eu-north-1.amazonaws.com/end-to-end-llmops:latest
+
+                    rem Upload the tagged image to the ECR repository.
+
+                    if errorlevel 1 exit /b 1
+                    rem Stop if the image upload fails.
+
+                    echo Docker image pushed successfully!
+                '''
+            }
+        }
+
+                /*
+         * STAGE 11: Verify Image in Amazon ECR
+         *
+         * DESCRIPTION:
+         * Checks whether the Docker image was successfully
+         * uploaded and is available in the ECR repository.
+         */
+
+        stage('Verify Image in ECR') {
+            steps {
+                bat '''
+                    echo Verifying Docker image in Amazon ECR...
+
+                    aws ecr describe-images ^
+                        --repository-name end-to-end-llmops ^
+                        --image-ids imageTag=latest ^
+                        --region "%AWS_REGION%" ^
+                        --profile "%AWS_PROFILE%"
+
+                    rem Retrieve image details from Amazon ECR.
+
+                    if errorlevel 1 exit /b 1
+                    rem Stop if the image cannot be found.
+
+                    echo ECR image verification successful!
+                '''
+            }
+        }
+    }
+
+    /*
+     * POST-BUILD ACTIONS
+     *
+     * DESCRIPTION:
+     * Display the final pipeline status after all stages finish.
+     */
+
+    post {
+
+        success {
+            echo 'SUCCESS: All pipeline stages completed successfully!'
+            // Display this message when every stage passes.
+        }
+
+        failure {
+            echo 'FAILURE: Pipeline execution failed. Check the Console Output.'
+            // Display this message if any stage fails.
+        }
+
+        always {
+            echo 'Jenkins pipeline execution completed.'
+            // Display this message regardless of the build result.
+        }
+    }
+}

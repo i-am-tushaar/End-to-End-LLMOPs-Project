@@ -1,6 +1,6 @@
 
-# 1. Use official Python 3.11 slim image
-FROM python:3.11-slim
+# 1. Use Python 3.14
+FROM python:3.14-slim
 
 # 2. Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -12,32 +12,27 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # 3. Set working directory
 WORKDIR /app
 
-# 4. Install required system dependencies
+# 4. Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     poppler-utils \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# 5. Copy uv package manager
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+# 5. Install UV
+COPY --from=ghcr.io/astral-sh/uv:0.11.23 /uv /uvx /bin/
 
-# 6. Copy production dependency file
-COPY requirements.txt ./
+# 6. Copy dependency files
+COPY pyproject.toml uv.lock ./
 
-# 7. Install CPU-only PyTorch
-RUN uv pip install --system \
-    --index-url https://download.pytorch.org/whl/cpu \
-    torch
+# 7. Install production dependencies only
+RUN uv sync --locked --no-dev --no-install-project
 
-# 8. Install remaining application dependencies
-RUN uv pip install --system --no-cache -r requirements.txt
-
-# 9. Copy application source code
+# 8. Copy application source code
 COPY . .
 
-# 10. Expose FastAPI application port
+# 9. Expose application port
 EXPOSE 8080
 
-# 11. Start FastAPI application using Uvicorn
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
+# 10. Start FastAPI application
+CMD ["uv", "run", "--no-sync", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]

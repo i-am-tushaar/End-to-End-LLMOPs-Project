@@ -345,6 +345,35 @@ pipeline {
                 '''
             }
         }
+
+                /*
+         * STAGE 11: Verify Image in Amazon ECR
+         *
+         * DESCRIPTION:
+         * Checks whether the Docker image was successfully
+         * uploaded and is available in the ECR repository.
+         */
+
+        stage('Verify Image in ECR') {
+            steps {
+                bat '''
+                    echo Verifying Docker image in Amazon ECR...
+
+                    aws ecr describe-images ^
+                        --repository-name end-to-end-llmops ^
+                        --image-ids imageTag=latest ^
+                        --region "%AWS_REGION%" ^
+                        --profile "%AWS_PROFILE%"
+
+                    rem Retrieve image details from Amazon ECR.
+
+                    if errorlevel 1 exit /b 1
+                    rem Stop if the image cannot be found.
+
+                    echo ECR image verification successful!
+                '''
+            }
+        }
     }
 
     /*

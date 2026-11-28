@@ -319,6 +319,32 @@ pipeline {
                 '''
             }
         }
+
+                /*
+         * STAGE 10: Push Docker Image to Amazon ECR
+         *
+         * DESCRIPTION:
+         * Uploads the locally tagged Docker image to the
+         * Amazon ECR repository using the Docker ECR credential helper.
+         */
+
+        stage('Push Docker Image to ECR') {
+            steps {
+                bat '''
+                    echo Pushing Docker image to Amazon ECR...
+
+                    docker push ^
+                        452975373208.dkr.ecr.eu-north-1.amazonaws.com/end-to-end-llmops:latest
+
+                    rem Upload the tagged image to the ECR repository.
+
+                    if errorlevel 1 exit /b 1
+                    rem Stop if the image upload fails.
+
+                    echo Docker image pushed successfully!
+                '''
+            }
+        }
     }
 
     /*

@@ -145,30 +145,28 @@ pipeline {
                 bat 'aws --profile jenkins-eks sts get-caller-identity --region eu-north-1' // Verify AWS identity
             }
         }
-
+        
 
         // STAGE 5: BUILD DOCKER IMAGE
-        // Generate a unique image tag using the Jenkins build number.
+        // Generate a unique Docker image tag using the Jenkins build number.
 
         stage('Docker Build') {
             steps {
                 script {
                 
-                    // Generate Docker image tag using Jenkins build number
-                    // Example: build-1, build-2, build-3
-                    env.IMAGE_TAG = "build-${env.BUILD_NUMBER}"
+                    // Get the current Jenkins build number
+                    // Example: 1, 2, 3, 4
+                    def imageTag = "build-${currentBuild.number}"
 
-                    // Display the generated image tag
-                    echo "Docker Image Tag: ${env.IMAGE_TAG}"
+                    // Display the generated Docker image tag
+                    echo "Docker Image Tag: ${imageTag}"
+
+                    // Build Docker image using the generated tag
+                    bat "docker build -t ${env.ECR_REGISTRY}/${env.ECR_REPOSITORY}:${imageTag} ."
 
                 }
-
-                // Build Docker image using the generated tag
-                bat '''
-                    docker build -t %ECR_REGISTRY%/%ECR_REPOSITORY%:%IMAGE_TAG% .
-                '''
             }
-        }
+        }                                           
 
 
 

@@ -290,6 +290,35 @@ pipeline {
                 '''
             }
         }
+
+                /*
+         * STAGE 9: Tag Docker Image
+         *
+         * DESCRIPTION:
+         * Assigns the AWS ECR repository URI to the locally
+         * built Docker image.
+         */
+
+        stage('Tag Docker Image') {
+            steps {
+                bat '''
+                    echo Tagging Docker image for Amazon ECR...
+
+                    docker tag "%DOCKER_IMAGE%" ^
+                        452975373208.dkr.ecr.eu-north-1.amazonaws.com/end-to-end-llmops:latest
+
+                    rem Assign the ECR repository name to the local image.
+
+                    if errorlevel 1 exit /b 1
+                    rem Stop if Docker image tagging fails.
+
+                    echo Verifying tagged image...
+
+                    docker images ^
+                        452975373208.dkr.ecr.eu-north-1.amazonaws.com/end-to-end-llmops
+                '''
+            }
+        }
     }
 
     /*
